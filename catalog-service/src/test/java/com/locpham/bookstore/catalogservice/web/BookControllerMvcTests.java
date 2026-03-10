@@ -6,18 +6,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.locpham.bookstore.catalogservice.domain.BookNotFoundException;
 import com.locpham.bookstore.catalogservice.domain.BookService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
-@WebMvcTest(BookController.class)
+@SpringBootTest
 public class BookControllerMvcTests {
 
-    @Autowired private MockMvc mockMvc;
+    @Autowired private WebApplicationContext webApplicationContext;
+
+    private MockMvc mockMvc;
 
     @MockitoBean private BookService bookService;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
 
     @Test
     void whenGetBookNotFoundThenShouldReturn404() throws Exception {

@@ -1,20 +1,24 @@
 name: CI Pipeline
-on: [push]
-
+on: 
+  push:
+  workflow_call:
 jobs:
   build:
-  name: Build
-  runs-on: ubuntu-20.04
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-    - name: Set up JDK
-      uses: actions/setup-java@v2
-      with:
-        distribution: temurin
-        java-version: 21
-  cache: gradle
-    - name: Compile and test application
-    run: |
-      chmod +x gradlew
-      ./gradlew build
+    name: Build
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: catalog-service
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Compile and test application
+        run: |
+          chmod +x gradlew
+          ./gradlew build

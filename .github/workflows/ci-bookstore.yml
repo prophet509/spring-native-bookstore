@@ -1,0 +1,9 @@
+name: Bookstore Pipeline
+on: 
+  push:
+    paths:
+      - 'catalog-service/**'
+
+jobs:
+  catalog-service-build:
+    uses: ./catalog-service/.github/workflows/ci-pipeline.yml

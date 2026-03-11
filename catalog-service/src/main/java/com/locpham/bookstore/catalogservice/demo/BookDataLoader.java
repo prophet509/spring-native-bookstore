@@ -2,8 +2,6 @@ package com.locpham.bookstore.catalogservice.demo;
 
 import com.locpham.bookstore.catalogservice.domain.Book;
 import com.locpham.bookstore.catalogservice.domain.BookRepository;
-import com.locpham.bookstore.catalogservice.domain.BookService;
-import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;

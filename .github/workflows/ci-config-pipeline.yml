@@ -43,6 +43,21 @@ jobs:
           java-version: '21'
           cache: gradle
 
+      - name: Debug registry inputs
+        run: |
+          echo "REGISTRY_URL=${{ secrets.REGISTRY_URL }}"
+          echo "REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}"
+          if [ -z "${{ secrets.REGISTRY_URL }}" ]; then
+            echo "REGISTRY_URL is empty" && exit 1
+          fi
+          if [ -z "${{ secrets.REGISTRY_USERNAME }}" ]; then
+            echo "REGISTRY_USERNAME is empty" && exit 1
+          fi
+          if [ -z "${{ secrets.REGISTRY_TOKEN }}" ]; then
+            echo "REGISTRY_TOKEN is empty" && exit 1
+          fi
+          echo "All registry secrets are present"
+
       - name: Containerize and publish image
         run: |
           chmod +x gradlew

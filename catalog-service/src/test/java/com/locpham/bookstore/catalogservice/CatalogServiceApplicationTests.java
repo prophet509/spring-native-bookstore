@@ -17,7 +17,7 @@ class CatalogServiceApplicationTests {
 
     @Test
     void whenPostRequestToBookToCreate() {
-        var expectingBook = new Book("1234567890", "Title", "Author", 9.90);
+        var expectingBook = Book.build("1234567899", "Title", "Author", 9.90, "Polarsophia");
         webTestClient
                 .post()
                 .uri("/books")
@@ -33,6 +33,7 @@ class CatalogServiceApplicationTests {
                             assertThat(actualBook.title()).isEqualTo(expectingBook.title());
                             assertThat(actualBook.author()).isEqualTo(expectingBook.author());
                             assertThat(actualBook.price()).isEqualTo(expectingBook.price());
+                            assertThat(actualBook.publisher()).isEqualTo(expectingBook.publisher());
                         });
     }
 

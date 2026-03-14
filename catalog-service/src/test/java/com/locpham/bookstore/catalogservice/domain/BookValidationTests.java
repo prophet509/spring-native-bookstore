@@ -18,14 +18,14 @@ public class BookValidationTests {
 
     @Test
     void whenAllFieldsCorrectThenValidationPasses() {
-        var book = new Book("1234567890", "Title", "Author", 9.90);
+        var book = Book.build("1234567890", "Title", "Author", 9.90, "Polarsophia");
         var violations = validator.validate(book);
         assertTrue(violations.isEmpty());
     }
 
     @Test
     void whenIsbnDefinedButInvalidThenValidationFails() {
-        var book = new Book("a234567890", "Title", "Author", 9.90);
+        var book = Book.build("a234567890", "Title", "Author", 9.90, "Polarsophia");
         var violations = validator.validate(book);
         assertTrue(violations.size() == 1);
         assertThat(violations.iterator().next().getMessage())

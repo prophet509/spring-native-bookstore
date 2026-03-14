@@ -14,6 +14,16 @@ spring:
         initial-interval: 1000
         max-interval: 2000
         multiplier: 1.1
+  datasource:
+    url: jdbc:postgresql://localhost:5432/polardb_catalog
+    username: user
+    password: password
+    hikari:
+      connection-timeout: 2000
+      maximum-pool-size: 5
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
 server:
   port: 9001
@@ -22,3 +32,9 @@ server:
     threads:
       max: 50
       min-spare: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: refresh

@@ -40,8 +40,19 @@ public class BookService {
             throw new BookNotFoundException(book.isbn());
         }
 
+        var existing = existingBook.get();
+        var updatedPublisher = book.publisher() != null ? book.publisher() : existing.publisher();
         var bookToUpdate =
-                new Book(existingBook.get().isbn(), book.title(), book.author(), book.price());
+                new Book(
+                        existing.id(),
+                        existing.isbn(),
+                        book.title(),
+                        book.author(),
+                        book.price(),
+                        updatedPublisher,
+                        existing.createdDate(),
+                        existing.lastModifiedDate(),
+                        existing.version());
 
         return bookRepository.save(bookToUpdate);
     }

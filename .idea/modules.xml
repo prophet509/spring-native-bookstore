@@ -5,7 +5,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/catalog-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/catalog-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/inventory-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/inventory-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/order-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/order-service.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/spring-native-bookstore.iml" filepath="$PROJECT_DIR$/.idea/spring-native-bookstore.iml" />
     </modules>
   </component>
 </project>

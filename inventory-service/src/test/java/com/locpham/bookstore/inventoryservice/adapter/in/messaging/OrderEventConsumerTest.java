@@ -10,12 +10,10 @@ import com.locpham.bookstore.inventoryservice.adapter.out.messaging.messages.Inv
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.JooqInventoryRepositoryImpl;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.JooqReservationRepositoryImpl;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
+import com.locpham.bookstore.inventoryservice.domain.ReservationStatus;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-
-import com.locpham.bookstore.inventoryservice.domain.Reservation;
-import com.locpham.bookstore.inventoryservice.domain.ReservationStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,14 +35,10 @@ import reactor.test.StepVerifier;
 @Testcontainers
 class OrderEventConsumerTest {
 
-    @Autowired
-    private InputDestination input;
-    @Autowired
-    private OutputDestination output;
-    @Autowired
-    private JooqInventoryRepositoryImpl inventoryRepository;
-    @Autowired
-    private JooqReservationRepositoryImpl reservationRepository;
+    @Autowired private InputDestination input;
+    @Autowired private OutputDestination output;
+    @Autowired private JooqInventoryRepositoryImpl inventoryRepository;
+    @Autowired private JooqReservationRepositoryImpl reservationRepository;
 
     private ObjectMapper objectMapper;
 
@@ -166,34 +160,41 @@ class OrderEventConsumerTest {
         var orderId = UUID.randomUUID();
 
         // Act: Send order-created event
-        var createMessage = new OrderCreatedMessage(
-                orderId, List.of(new OrderCreatedMessage.OrderItem("ABC", 2)));
-        input.send(MessageBuilder.withPayload(objectMapper.writeValueAsBytes(createMessage))
-                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build(), "order-events");
+        var createMessage =
+                new OrderCreatedMessage(
+                        orderId, List.of(new OrderCreatedMessage.OrderItem("ABC", 2)));
+        input.send(
+                MessageBuilder.withPayload(objectMapper.writeValueAsBytes(createMessage))
+                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .build(),
+                "order-events");
 
         // Verify stock đã được reserve
         StepVerifier.create(awaitStock("ABC", 8, 2))
-                .assertNext(updated -> {
-                    assertThat(updated.availableQuantity()).isEqualTo(8);
-                    assertThat(updated.reservedQuantity()).isEqualTo(2);
-                })
+                .assertNext(
+                        updated -> {
+                            assertThat(updated.availableQuantity()).isEqualTo(8);
+                            assertThat(updated.reservedQuantity()).isEqualTo(2);
+                        })
                 .verifyComplete();
 
-        drainOutput("inventory-events");  // clean decision
+        drainOutput("inventory-events"); // clean decision
 
         // Act: Send order-cancelled event
         var cancelMessage = new OrderCancelledMessage(orderId);
-        input.send(MessageBuilder.withPayload(objectMapper.writeValueAsBytes(cancelMessage))
-                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .build(), "order-events");
+        input.send(
+                MessageBuilder.withPayload(objectMapper.writeValueAsBytes(cancelMessage))
+                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .build(),
+                "order-events");
 
         // Assert wait for invetory release
         StepVerifier.create(awaitStock("ABC", 10, 0))
-                .assertNext( updated -> {
-                    assertThat(updated.availableQuantity()).isEqualTo(10);
-                    assertThat(updated.reservedQuantity()).isEqualTo(0);
-                })
+                .assertNext(
+                        updated -> {
+                            assertThat(updated.availableQuantity()).isEqualTo(10);
+                            assertThat(updated.reservedQuantity()).isEqualTo(0);
+                        })
                 .verifyComplete();
 
         // Assert is released

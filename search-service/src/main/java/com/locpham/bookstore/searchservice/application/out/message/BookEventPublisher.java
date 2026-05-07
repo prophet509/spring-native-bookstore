@@ -1,4 +1,4 @@
-package com.locpham.bookstore.searchservice.application.out;
+package com.locpham.bookstore.searchservice.application.out.message;
 
 import java.awt.print.Book;
 

@@ -6,5 +6,4 @@ public record BookDocument(
         String author,
         Double price,
         String publisher
-) {
-}
+) {}

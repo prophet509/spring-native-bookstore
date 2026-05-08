@@ -1,9 +1,11 @@
 package com.locpham.bookstore.searchservice.application.out.message;
 
-import java.awt.print.Book;
+
+import com.locpham.bookstore.searchservice.domain.BookDocument;
+import reactor.core.publisher.Mono;
 
 public interface BookEventPublisher {
-    void publishBookCreated(Book book);
-    void publishBookUpdated(Book book);
-    void publishBookDeleted(String isbn);
+    Mono<Void> publishBookCreated(BookDocument book);
+    Mono<Void> publishBookUpdated(BookDocument book);
+    Mono<Void> publishBookDeleted(String isbn);
 }

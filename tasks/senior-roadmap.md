@@ -14,7 +14,7 @@ graph TD
     EdgeService --> SearchService["search-service :9005 ⭐NEW"]
     OrderService -->|Kafka: order.placed| InventoryService["inventory-service :9004"]
     OrderService -->|Kafka: order.accepted| DispatcherService["dispatcher-service"]
-    CatalogService -->|Kafka: bookOld.created/updated| SearchService
+    CatalogService -->|Kafka: book.created/updated| SearchService
     CatalogService --> PolarDB_Catalog[(PostgreSQL :5432)]
     OrderService --> PolarDB_Order[(PostgreSQL :5433)]
     InventoryService --> PolarDB_Inventory[(PostgreSQL :5434)]
@@ -72,13 +72,17 @@ graph TD
       // ...
   ) {}
   ```
-- [ ] **2.3 Kafka Consumer:** Lắng nghe `bookOld.created` và `bookOld.updated` từ `catalog-service` → index vào Elasticsearch
+- [ ] **2.3 Kafka Consumer (reactive):** Lắng nghe `book.created` / `book.updated` / `book.deleted` từ `catalog-service` → index vào Elasticsearch.
+  - Dùng `Function<Flux<T>, Mono<Void>>` bean (KHÔNG dùng `Consumer<Flux<T>>` + `.subscribe()` — mất backpressure).
+  - Chi tiết trong `tasks/search-service-plan.md` Phase 5.
 - [ ] **2.4 Search API:** Implement các endpoints:
   - `GET /search?q=spring&page=0&size=10` — full-text search
   - `GET /search?author=vitale&sort=price,asc` — filter + sort
   - `GET /search/suggest?q=spr` — autocomplete
 - [ ] **2.5 Highlight:** Trả về highlighted snippets trong kết quả tìm kiếm
-- [ ] **2.6 catalog-service phát event:** Thêm Kafka publisher vào `catalog-service` khi bookOld được tạo/cập nhật/xóa
+- [ ] **2.6 catalog-service phát event:** Thêm Kafka publisher vào `catalog-service` khi book được tạo/cập nhật/xóa (publish `book.created` / `book.updated` / `book.deleted`).
+  - Stack catalog hiện là MVC blocking → dùng `StreamBridge.send` sau `bookRepository.save(...)`.
+  - Khi migrate sang reactive (R2DBC) trong tương lai → chuyển sang `Sinks.Many` pattern (xem search-service-plan Phase 7).
 - [ ] **2.7 Tests:** Integration test với Testcontainers Elasticsearch
 
 **Verify:**
@@ -513,3 +517,92 @@ watch kubectl get pods -n bookstore
 - **Lv 4:** Push một commit → 5 phút sau thấy production tự động deploy (ArgoCD + CI)
 - **Lv 5:** `dispatcher-service` scale từ 0 → N pods trong < 3s khi Kafka có event, rồi scale về 0 sau 90s idle
 - **Lv 6:** Canary deploy `catalog-service` trên AWS EKS → inject 10% lỗi → ArgoCD + Argo Rollouts tự động rollback
+
+---
+
+## 📚 Further Reading — Tài Liệu Đính Kèm Theo Giai Đoạn
+
+> Mỗi giai đoạn có links đọc hiểu sâu. Chi tiết đầy đủ hơn trong `tasks/new-technology.md` (theo Module) và `tasks/search-service-plan.md` (theo Phase).
+
+### Giai Đoạn 1 — inventory-service
+- [Spring Cloud Stream — Producing and Consuming Messages](https://docs.spring.io/spring-cloud-stream/reference/spring-cloud-stream/producing-and-consuming-messages.html) — reactive Function bindings.
+- [jOOQ Reference](https://www.jooq.org/doc/latest/manual/) — typesafe SQL DSL.
+- [PostgreSQL — Concurrency Control / `SELECT FOR UPDATE`](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS) — pessimistic locking cho stock reservation.
+- [Testcontainers — PostgreSQL module](https://java.testcontainers.org/modules/databases/postgres/)
+- [Spring Cloud Stream — Test Binder](https://docs.spring.io/spring-cloud-stream/reference/spring-cloud-stream/testing.html)
+
+### Giai Đoạn 2 — search-service
+- Xem **`tasks/search-service-plan.md`** — Further Reading per phase (đã chèn).
+- [Spring Data Elasticsearch — Reactive Operations](https://docs.spring.io/spring-data/elasticsearch/reference/elasticsearch/reactive-template.html)
+- [Elasticsearch 8 — Search APIs](https://www.elastic.co/guide/en/elasticsearch/reference/current/search.html)
+- [Elasticsearch — Highlighting & Suggesters](https://www.elastic.co/guide/en/elasticsearch/reference/current/highlighting.html)
+
+### Giai Đoạn 3 — Security (Keycloak / OAuth2 / OIDC)
+- **OAuth2 / OIDC specs (must-read trước khi code):**
+  - [RFC 6749 — OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc6749)
+  - [RFC 7636 — PKCE](https://datatracker.ietf.org/doc/html/rfc7636)
+  - [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
+- **Spring Security:**
+  - [Spring Security — OAuth2 Client (Servlet)](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html)
+  - [Spring Security — OAuth2 Login (Reactive)](https://docs.spring.io/spring-security/reference/reactive/oauth2/login/index.html)
+  - [Spring Security — OAuth2 Resource Server (JWT)](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html)
+  - [Spring Security — Reactive Method Security](https://docs.spring.io/spring-security/reference/reactive/authorization/method.html)
+  - [Spring Security — Token Relay filter (Spring Cloud Gateway)](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway/global-filters.html#the-tokenrelay-filter)
+- **Keycloak:**
+  - [Keycloak — Server Administration Guide](https://www.keycloak.org/docs/latest/server_admin/)
+  - [Keycloak Testcontainers (Java)](https://github.com/dasniko/testcontainers-keycloak)
+- **BFF Pattern:**
+  - [OAuth2 BFF pattern — IETF draft](https://datatracker.ietf.org/doc/html/draft-bertocci-oauth2-tmi-bff)
+  - [Auth0 — BFF for SPAs](https://auth0.com/blog/the-backend-for-frontend-pattern-bff/)
+
+### Giai Đoạn 4 — Production Patterns
+> Tham chiếu Modules 1, 4, 7 trong `new-technology.md`. Highlights:
+- [RFC 7807 — Problem Details](https://datatracker.ietf.org/doc/html/rfc7807)
+- [Debezium — Outbox Pattern](https://debezium.io/blog/2019/02/19/reliable-microservices-data-exchange-with-the-outbox-pattern/)
+- [Resilience4j — Getting Started](https://resilience4j.readme.io/docs/getting-started-3)
+- [Microservices.io — Saga Pattern](https://microservices.io/patterns/data/saga.html)
+- [OpenTelemetry — Java](https://opentelemetry.io/docs/languages/java/)
+- [Spring blog — OpenTelemetry with Spring Boot (2025)](https://spring.io/blog/2025/11/18/opentelemetry-with-spring-boot/)
+
+### Giai Đoạn 5 — GitOps (ArgoCD + GitHub Actions)
+- [OpenGitOps Principles (4 nguyên tắc)](https://opengitops.dev/) — bắt đầu từ đây.
+- [Argo CD — Documentation](https://argo-cd.readthedocs.io/en/stable/)
+- [Argo CD — Best Practices](https://argo-cd.readthedocs.io/en/stable/user-guide/best_practices/)
+- [Argo CD — Declarative Setup](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/)
+- [Argo Rollouts — Progressive Delivery](https://argoproj.github.io/argo-rollouts/)
+- [Helm — Best Practices](https://helm.sh/docs/chart_best_practices/)
+- [Sealed Secrets (Bitnami)](https://sealed-secrets.netlify.app/)
+- [External Secrets Operator](https://external-secrets.io/latest/)
+- [GitHub Actions — Reference](https://docs.github.com/en/actions)
+
+### Giai Đoạn 6 — Knative Serverless
+- [Knative — Serving documentation](https://knative.dev/docs/serving/)
+- [Knative — Eventing documentation](https://knative.dev/docs/eventing/)
+- [Knative — Broker for Apache Kafka](https://knative.dev/docs/eventing/brokers/broker-types/kafka-broker/)
+- [Knative — Apache Kafka Source](https://knative.dev/docs/eventing/sources/kafka-source/)
+- [Knative — Autoscaling concepts](https://knative.dev/docs/serving/autoscaling/)
+- [CloudEvents specification (CNCF)](https://cloudevents.io/) — event format chuẩn.
+- [Knative Functions (`kn func`)](https://knative.dev/docs/functions/)
+
+### Giai Đoạn 7 — AWS Production
+- [AWS — Amazon EKS Best Practices Guide](https://aws.github.io/aws-eks-best-practices/)
+- [AWS Prescriptive Guidance — Cloud Design Patterns](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/welcome.html)
+- [AWS — RDS PostgreSQL best practices](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_BestPractices.html)
+- [AWS — MSK best practices](https://docs.aws.amazon.com/msk/latest/developerguide/bestpractices.html)
+- [AWS — ECR](https://docs.aws.amazon.com/AmazonECR/latest/userguide/what-is-ecr.html)
+- [AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/) — ALB/NLB on EKS.
+- [eksctl documentation](https://eksctl.io/)
+
+---
+
+### Books — đọc cả cuốn (priority list)
+
+| Sách | Khi nào đọc |
+|------|-------------|
+| **Cloud Native Spring in Action** — Thomas Vitale | Đang đọc — reference chính cho stack project. |
+| **Designing Data-Intensive Applications** — Martin Kleppmann | Trước Module 3 (Kafka) và Module 4 (Distributed). Bible. |
+| **Release It! 2nd ed** — Michael Nygard | Trước Module 4 (Circuit Breaker, Bulkhead). |
+| **Kafka: The Definitive Guide 2nd ed** — Confluent | Song song với Module 3. |
+| **Building Microservices 2nd ed** — Sam Newman | Trước Giai Đoạn 4 (production patterns). |
+| **Site Reliability Engineering** (free) | Trước Module 7 (Observability). https://sre.google/books/ |
+| **Hexagonal Architecture Explained** — Cockburn & Garrido de Paz (2025 edition) | Khi audit architecture compliance. |

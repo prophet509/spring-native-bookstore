@@ -5,7 +5,8 @@ import reactor.core.publisher.Mono;
 
 public interface BookIndexRepository {
     Mono<BookDocument> save(BookDocument doc);
+
     Mono<Void> deleteByIsbn(String isbn);
+
     Mono<BookDocument> findByIsbn(String isbn);
 }
-

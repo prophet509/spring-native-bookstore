@@ -108,6 +108,32 @@ services:
     networks:
       - polar-network
 
+  search-service:
+    image: "pxloc97/search-service:0.0.1-SNAPSHOT"
+    container_name: "search-service"
+    ports:
+      - 8006:8006
+      - 9005:9005
+    environment:
+      - BPL_DEBUG_ENABLED=true
+      - BPL_DEBUG_PORT=8006
+      - BPL_JAVA_NMT_ENABLED=false
+      - BPL_JVM_THREAD_COUNT=50
+      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
+      - OTEL_SERVICE_NAME=search-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - OTEL_METRICS_EXPORTER=none
+      - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
+      - SPRING_ELASTICSEARCH_URIS=http://polar-elasticsearch:9200
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: 127.0.0.1:24224
+        tag: "search-service"
+    networks:
+      - polar-network
+
   edge-service:
     image: "pxloc97/edge-service:0.0.1-SNAPSHOT"
     container_name: "edge-service"

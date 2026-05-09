@@ -1,0 +1,50 @@
+name: Search CI Pipeline
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: search-service
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Compile and test application
+        run: |
+          chmod +x gradlew
+          ./gradlew build
+
+  package:
+    name: Package
+    needs: [build]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: search-service
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Containerize and publish image
+        run: |
+          chmod +x gradlew
+          ./gradlew bootBuildImage --publishImage \
+            -PregistryUrl=${{ secrets.REGISTRY_URL }} \
+            -PregistryUsername=${{ secrets.REGISTRY_USERNAME }} \
+            -PregistryToken=${{ secrets.REGISTRY_TOKEN }}

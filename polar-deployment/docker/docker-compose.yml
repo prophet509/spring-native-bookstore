@@ -76,6 +76,21 @@ services:
     networks:
       - polar-network
 
+  polar-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: polar-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - polar-network
+
   polar-kafka:
     image: apache/kafka:4.2.0
     hostname: polar-kafka
@@ -186,6 +201,8 @@ services:
 
 volumes:
   kafka_data:
+    driver: local
+  elasticsearch_data:
     driver: local
 
 networks:

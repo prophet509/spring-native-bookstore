@@ -27,3 +27,7 @@ jobs:
   inventory-service-build:
     uses: ./.github/workflows/ci-inventory-pipeline.yml
     secrets: inherit
+
+  search-service-build:
+    uses: ./.github/workflows/ci-search-pipeline.yml
+    secrets: inherit

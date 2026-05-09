@@ -185,7 +185,7 @@ Connection pool sai config = deadlock dưới load, hoặc waste resources. Juni
         max-lifetime: 1800000        # 30 minutes (must < DB wait_timeout)
         leak-detection-threshold: 60000 # alert if connection held > 60s
   ```
-- [ ] **Formula:** `pool_size = Tn × (Cm - 1) + 1` donde Tn = concurrent threads, Cm = concurrent connections per thread
+- [ ] **Formula:** `pool_size = Tn × (Cm - 1) + 1` trong đó Tn = concurrent threads, Cm = concurrent connections per thread
 - [ ] Monitor pool metrics qua HikariCP Micrometer integration:
   - `hikaricp.connections.active`
   - `hikaricp.connections.idle`
@@ -206,7 +206,7 @@ curl http://localhost:9001/actuator/metrics/hikaricp.connections.active
 **Service:** `catalog-service`, `order-service`, `inventory-service`
 
 **Tại sao Senior cần biết:**
-Query chậm不是因为 data nhiều — mà vì thiếu index hoặc sai index strategy. Senior đọc `EXPLAIN ANALYZE` như đọc sách.
+Query chậm không phải vì data nhiều — mà vì thiếu index hoặc sai index strategy. Senior đọc `EXPLAIN ANALYZE` như đọc sách.
 
 **Tasks:**
 - [ ] **EXPLAIN ANALYZE** mọi query quan trọng — đọc execution plan:
@@ -360,20 +360,33 @@ DB fail → toàn bộ service fail. Senior biết configure connection resilien
         enable-auto-commit: false  # Manual commit = exactly-once
         auto-offset-reset: earliest # Khi consumer mới join group
   ```
-- [ ] Implement **manual acknowledgment** trong Spring Cloud Stream:
-  ```java
-  @Bean
-  public Consumer<Message<OrderPlacedEvent>> handleOrderPlaced() {
-      return message -> {
-          try {
-              processOrder(message.getPayload());
-              message.getHeaders().get(KafkaHeaders.ACKNOWLEDGMENT, Acknowledgment.class).acknowledge();
-          } catch (Exception e) {
-              // Don't ack → redelivery
-          }
-      };
-  }
-  ```
+- [ ] Implement **manual acknowledgment** trong Spring Cloud Stream.
+  - **Imperative variant** (catalog-service / inventory-service):
+    ```java
+    @Bean
+    public Consumer<Message<OrderPlacedEvent>> handleOrderPlaced() {
+        return message -> {
+            try {
+                processOrder(message.getPayload());
+                message.getHeaders().get(KafkaHeaders.ACKNOWLEDGMENT, Acknowledgment.class).acknowledge();
+            } catch (Exception e) {
+                // Don't ack → redelivery
+            }
+        };
+    }
+    ```
+  - **Reactive variant** (order-service / search-service) — dùng `Function<Flux<...>, Mono<Void>>`:
+    ```java
+    @Bean
+    public Function<Flux<Message<OrderPlacedEvent>>, Mono<Void>> handleOrderPlaced() {
+        return flux -> flux
+            .concatMap(msg -> processOrder(msg.getPayload())
+                .doOnSuccess(v -> ack(msg))
+                .onErrorResume(e -> { log.error("fail", e); return Mono.empty(); }))
+            .then();
+    }
+    ```
+    Lý do `Function<Flux,Mono<Void>>` thay vì `Consumer<Flux>`: binder tự subscribe, giữ backpressure & error signal. KHÔNG bao giờ gọi `.subscribe()` thủ công bên trong consumer bean.
 - [ ] **Senior Insight:** `auto-offset-reset: earliest` vs `latest` — chọn sai = mất message hoặc xử lý duplicate. Production nên dùng `earliest` cho new consumer groups.
 
 **Verify:**
@@ -505,7 +518,8 @@ Order cancel đến TRƯỚC order place (do network retry) → stock released c
       public int partition(String topic, Object key, byte[] keyBytes,
                           Object value, byte[] valueBytes, Cluster cluster) {
           int numPartitions = cluster.partitionCountForTopic(topic);
-          return Math.abs(key.hashCode()) % numPartitions;
+          // Dùng Math.floorMod để tránh số âm khi hashCode == Integer.MIN_VALUE
+          return Math.floorMod(key.hashCode(), numPartitions);
       }
   }
   ```
@@ -722,7 +736,7 @@ Compensation:
 - [ ] **Senior Insight:** Choreography (event-based) vs Orchestration (central coordinator):
   - **Choreography:** Simple, loose coupling, hard to track. Good for 3-4 services.
   - **Orchestration:** Central saga orchestrator, easier tracking, more coupling. Good for complex sagas.
-  -本项目 dùng **Choreography** — phù hợp vì chỉ có 2-3 services tham gia.
+  - Dự án này dùng **Choreography** — phù hợp vì chỉ có 2-3 services tham gia.
 
 **Verify:**
 - Place order với quantity > available stock
@@ -749,18 +763,20 @@ Junior dùng reactive vì "cool". Senior dùng reactive vì có reason — high 
   Subscriber.request(10) → Publisher emits max 10 items
   Without backpressure: Publisher emits 1M items → Subscriber OOM
   ```
-- [ ] Implement backpressure-aware consumer:
+- [ ] Implement backpressure-aware consumer (đúng signature reactive Spring Cloud Stream):
   ```java
   @Bean
-  public Consumer<Flux<Message<OrderPlacedEvent>>> handleOrderPlaced() {
+  public Function<Flux<Message<OrderPlacedEvent>>, Mono<Void>> handleOrderPlaced() {
       return flux -> flux
           .flatMap(message -> processOrder(message.getPayload()), 4) // concurrency = 4
           .onErrorResume(e -> {
               log.error("Error processing order", e);
               return Mono.empty();
-          });
+          })
+          .then();
   }
   ```
+  > **Anti-pattern:** `Consumer<Flux<T>>` + `.subscribe()` bên trong → mất backpressure & error signal cho binder.
 - [ ] Hiểu **Event Loop model** của Netty:
   - Default: 2 × CPU cores event loops
   - **KHÔNG BAO GIỜ** block event loop — no `Thread.sleep`, no blocking DB call
@@ -922,16 +938,18 @@ curl http://localhost:9001/books
 DDoS hoặc bot traffic → backend overwhelmed. Rate limiting tại gateway = first line of defense.
 
 **Tasks:**
-- [ ] Configure Redis-based rate limiting (already partially implemented):
+- [ ] Configure Redis-based rate limiting — `RequestRateLimiter` filter (đã partially implemented). Cấu hình đúng nằm trong `filters` của route, không phải global key:
   ```yaml
   # config/edge-service.yml
   spring:
     cloud:
       gateway:
-        redis-rate-limiter:
-          replenish-rate: 10      # 10 requests/second
-          burst-capacity: 20      # allow burst of 20
-          requested-tokens: 1
+        default-filters:
+          - name: RequestRateLimiter
+            args:
+              redis-rate-limiter.replenishRate: 10  # 10 req/s
+              redis-rate-limiter.burstCapacity: 20  # burst 20
+              redis-rate-limiter.requestedTokens: 1
   ```
 - [ ] Custom `KeyResolver` — rate limit per user, not per IP:
   ```java
@@ -1601,3 +1619,249 @@ Sau khi hoàn thành tất cả modules, trả lời được các câu hỏi sa
 - [ ] **Explain to junior:** Can you teach each module to someone with 1 year experience?
 
 > **Nếu trả lời được tất cả — bạn ready cho Senior.**
+
+---
+
+## 📚 Further Reading — Tài Liệu Đọc Hiểu Sâu Theo Module
+
+> Mỗi link là tài liệu **chính thức** hoặc bài viết của **maintainer/expert**. Không phải tutorial blog rác. Đọc theo thứ tự để hiểu *tại sao* trước khi *làm thế nào*.
+
+### Module 1 — Foundation Professionalism
+
+**1.1 Global Exception Handling (RFC 7807)**
+- [RFC 7807 — Problem Details for HTTP APIs (IETF)](https://datatracker.ietf.org/doc/html/rfc7807) — spec gốc.
+- [Spring Framework — Error Responses (RFC 7807 support)](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html) — `ProblemDetail`, `ErrorResponseException`, `ResponseEntityExceptionHandler`.
+- [Javadoc — `ProblemDetail`](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/ProblemDetail.html)
+- [Spring WebFlux — Error Handling](https://docs.spring.io/spring-framework/reference/web/webflux/ann-rest-exceptions.html) — phiên bản reactive cho `order-service`.
+
+**1.2 Validation Multi-Layer**
+- [Jakarta Bean Validation 3.0 spec](https://jakarta.ee/specifications/bean-validation/3.0/) — annotation reference.
+- [Hibernate Validator reference](https://docs.jboss.org/hibernate/validator/8.0/reference/en-US/html_single/) — implementation chính (Spring Boot dùng).
+- [Spring — Method Validation](https://docs.spring.io/spring-framework/reference/core/validation/beanvalidation.html) — `@Validated` ở service layer.
+
+**1.3 Structured Logging**
+- [Logstash Logback Encoder (GitHub)](https://github.com/logfellow/logstash-logback-encoder) — JSON encoder dùng phổ biến nhất.
+- [SLF4J — MDC (Mapped Diagnostic Context)](https://www.slf4j.org/manual.html#mdc) — context propagation.
+- [Spring Boot — Logging](https://docs.spring.io/spring-boot/reference/features/logging.html) — profile-based config.
+
+**1.4 API Versioning & OpenAPI**
+- [Springdoc OpenAPI](https://springdoc.org/) — official starter cho Spring Boot 3+.
+- [OpenAPI 3.1 specification](https://spec.openapis.org/oas/v3.1.0)
+
+---
+
+### Module 2 — Database Mastery
+
+**2.1 HikariCP**
+- [HikariCP — About Pool Sizing](https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing) — formula `Tn × (Cm-1) + 1` lấy từ đây.
+- [HikariCP — MySQL Configuration](https://github.com/brettwooldridge/HikariCP/wiki/MySQL-Configuration) (áp dụng được cho PostgreSQL với điều chỉnh nhỏ).
+- [Spring Boot — DataSource auto-config](https://docs.spring.io/spring-boot/reference/data/sql.html#data.sql.datasource)
+
+**2.2 Indexing & Query**
+- [PostgreSQL — `EXPLAIN`](https://www.postgresql.org/docs/current/using-explain.html) — đọc execution plan.
+- [Use The Index, Luke!](https://use-the-index-luke.com/) — sách online miễn phí, gold standard về indexing.
+- [PostgreSQL — Index Types](https://www.postgresql.org/docs/current/indexes-types.html) — B-tree, Hash, GiST, GIN, BRIN.
+
+**2.3 Zero-Downtime Migrations**
+- [Flyway — Best Practices](https://documentation.red-gate.com/fd/best-practices-184127204.html)
+- [Stripe Engineering — Online Migrations at Scale](https://stripe.com/blog/online-migrations) — case study expand-contract.
+- [GitHub — Strong Migrations gem (rules áp dụng được cho mọi DB)](https://github.com/ankane/strong_migrations) — checklist các thao tác unsafe.
+
+---
+
+### Module 3 — Kafka Deep Dive
+
+**3.1 Kafka Internals**
+- [Confluent — Kafka Internals (free course)](https://developer.confluent.io/courses/architecture/get-started/) — official.
+- [Apache Kafka — Documentation](https://kafka.apache.org/documentation/) — phần *Design* và *Implementation*.
+- [Confluent — Consumer Groups & Rebalance](https://docs.confluent.io/platform/current/clients/consumer.html)
+
+**3.2 DLQ**
+- [Spring Cloud Stream — Retry and Dead Letter Processing](https://docs.spring.io/spring-cloud-stream/reference/kafka/kafka-binder/retry-dlq.html)
+- [Spring Cloud Stream — Dead-Letter Topic Processing](https://docs.spring.io/spring-cloud-stream/reference/kafka/kafka-binder/dlq.html)
+- [Confluent — Error handling patterns](https://www.confluent.io/blog/error-handling-patterns-in-kafka/)
+
+**3.3 Exactly-Once & Idempotent Consumer**
+- [Confluent blog — Exactly-once semantics in Kafka](https://www.confluent.io/blog/exactly-once-semantics-are-possible-heres-how-apache-kafka-does-it/) — bài gốc của Jay Kreps team.
+- [Confluent Patterns — Idempotent Reader](https://developer.confluent.io/patterns/event-processing/idempotent-reader/)
+- [Confluent Patterns — Idempotent Writer](https://developer.confluent.io/patterns/event-processing/idempotent-writer/)
+- [Kafka — Message Delivery Guarantees](https://docs.confluent.io/kafka/design/delivery-semantics.html)
+
+**3.4 Message Ordering**
+- [Confluent — Ordering Guarantees](https://docs.confluent.io/platform/current/clients/producer.html#ordering-guarantees)
+- [Apache Kafka — Producer Configuration `max.in.flight.requests.per.connection`](https://kafka.apache.org/documentation/#producerconfigs_max.in.flight.requests.per.connection) — quan trọng khi enable retries + idempotence.
+
+---
+
+### Module 4 — Distributed Systems Patterns
+
+**4.1 Outbox Pattern**
+- [Debezium blog — Reliable Microservices Data Exchange With the Outbox Pattern](https://debezium.io/blog/2019/02/19/reliable-microservices-data-exchange-with-the-outbox-pattern/) — must-read.
+- [Decodable — Revisiting the Outbox Pattern](https://www.decodable.co/blog/revisiting-the-outbox-pattern) — polling vs CDC trade-off.
+- [Microservices.io — Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html) — Chris Richardson.
+- [Thorben Janssen — Outbox Pattern with CDC and Debezium](https://thorben-janssen.com/outbox-pattern-with-cdc-and-debezium/) — implementation Java cụ thể.
+
+**4.2 Resilience4j (Circuit Breaker, Retry, Bulkhead, Timeout)**
+- [Resilience4j — Getting Started](https://resilience4j.readme.io/docs/getting-started-3) — official.
+- [Resilience4j — Spring Boot 3](https://resilience4j.readme.io/docs/getting-started-3#section-spring-boot-3) — annotation + reactive support.
+- [Resilience4j — CircuitBreaker design](https://resilience4j.readme.io/docs/circuitbreaker) — sliding window, state transitions.
+- [Resilience4j — Decorator order](https://resilience4j.readme.io/docs/getting-started-3#section-aspect-order) — chính thức về thứ tự `Bulkhead → CircuitBreaker → RateLimiter → TimeLimiter → Retry`.
+
+**4.3 Caching**
+- [Spring Framework — Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration/cache.html)
+- [Spring Data Redis — Cache](https://docs.spring.io/spring-data/redis/reference/redis/redis-cache.html)
+- [AWS Architecture Blog — Cache strategies](https://aws.amazon.com/blogs/database/caching-strategies-and-best-practices/)
+- [Redis — Cache eviction](https://redis.io/docs/latest/develop/reference/eviction/)
+
+**4.4 Saga**
+- [Microservices.io — Saga Pattern](https://microservices.io/patterns/data/saga.html) — Chris Richardson canonical.
+- [Chris Richardson — Sagas: Choreography vs Orchestration (book chapter excerpt)](https://chrisrichardson.net/post/microservices/2019/07/09/developing-sagas-part-2.html)
+- [AWS — Saga pattern reference](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/saga.html)
+
+---
+
+### Module 5 — Reactive & Concurrency
+
+**5.1 Reactive Deep Dive**
+- [Reactive Streams specification](https://www.reactive-streams.org/) — contract chuẩn.
+- [Project Reactor — Reference Guide](https://projectreactor.io/docs/core/release/reference/) — đọc chương *Core Features*.
+- [Reactor — Backpressure](https://projectreactor.io/docs/core/release/reference/coreFeatures/reactorBackpressure.html)
+- [Reactor — Schedulers](https://projectreactor.io/docs/core/release/reference/coreFeatures/schedulers.html) — khi nào dùng `boundedElastic` vs `parallel`.
+- [BlockHound](https://github.com/reactor/BlockHound) — detect blocking on event-loop.
+- [Spring — Observability with Reactive](https://docs.spring.io/spring-framework/reference/integration/observability.html)
+
+**5.2 Virtual Threads vs Reactive**
+- [JEP 444 — Virtual Threads (Java 21)](https://openjdk.org/jeps/444) — spec gốc.
+- [Spring Boot — Virtual Threads support](https://spring.io/blog/2023/09/09/all-together-now-spring-boot-3-2-graalvm-native-images-java-21-and-virtual) — official guide.
+- [GitHub — chrisgleissner/loom-webflux-benchmarks](https://github.com/chrisgleissner/loom-webflux-benchmarks) — benchmark thực tế Virtual Threads vs WebFlux.
+- [Vincenzo Racca — Virtual Threads vs WebFlux: who wins?](https://www.vincenzoracca.com/en/blog/framework/spring/virtual-threads-vs-webflux/) — phân tích trade-off.
+- [Inside Java — State of Loom](https://cr.openjdk.org/~rpressler/loom/loom/sol1_part1.html) — Ron Pressler (Loom lead).
+
+---
+
+### Module 6 — Production Security
+
+**6.1 Security Headers & OWASP**
+- [OWASP Top 10:2021](https://owasp.org/Top10/) — must-read.
+- [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/) — reference cho từng risk.
+- [OWASP — HTTP Security Response Headers Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html)
+- [Spring Security — Security HTTP Response Headers](https://docs.spring.io/spring-security/reference/features/exploits/headers.html)
+
+**6.2 OAuth2 / JWT Validation**
+- [RFC 6749 — OAuth 2.0](https://datatracker.ietf.org/doc/html/rfc6749)
+- [RFC 7636 — PKCE](https://datatracker.ietf.org/doc/html/rfc7636)
+- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
+- [Spring Security — OAuth2 Resource Server](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/index.html)
+- [Spring Security — OAuth2 Client](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html)
+- [Spring Authorization Server — PKCE guide](https://docs.spring.io/spring-authorization-server/reference/guides/how-to-pkce.html)
+
+**6.3 Rate Limiting**
+- [Spring Cloud Gateway — RequestRateLimiter](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway/gatewayfilter-factories/requestratelimiter-factory.html)
+- [Stripe Engineering — Scaling your API with rate limiters](https://stripe.com/blog/rate-limiters) — token bucket vs sliding window.
+- [Cloudflare — How we built rate limiting at scale](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/)
+
+---
+
+### Module 7 — Observability
+
+**7.1 Distributed Tracing**
+- [OpenTelemetry — Java instrumentation](https://opentelemetry.io/docs/languages/java/) — official.
+- [Spring blog — OpenTelemetry with Spring Boot (2025)](https://spring.io/blog/2025/11/18/opentelemetry-with-spring-boot/) — most recent guide.
+- [Spring blog — Observability with Spring Boot 3](https://spring.io/blog/2022/10/12/observability-with-spring-boot-3/) — Micrometer Tracing bridge.
+- [Grafana Tempo](https://grafana.com/docs/tempo/latest/) — distributed tracing backend.
+- [Sampling strategies — head vs tail](https://opentelemetry.io/docs/concepts/sampling/)
+
+**7.2 Metrics**
+- [Micrometer documentation](https://micrometer.io/docs)
+- [Google SRE Book — The Four Golden Signals](https://sre.google/sre-book/monitoring-distributed-systems/#xref_monitoring_golden-signals) — canonical reference.
+- [Prometheus — Best practices for metric naming](https://prometheus.io/docs/practices/naming/)
+
+**7.3 Health Probes & Graceful Shutdown**
+- [Spring Boot — Health endpoint & Kubernetes probes](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes)
+- [Spring Boot — Graceful shutdown](https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html)
+- [Kubernetes — Liveness, Readiness, Startup probes](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes)
+- [Google SRE — Production-Ready Microservices (chapter on probes)](https://sre.google/workbook/canarying-releases/)
+
+---
+
+### Module 8 — Performance Engineering
+
+**8.1 JVM Tuning & GC**
+- [Oracle — HotSpot Virtual Machine GC Tuning Guide (Java 21)](https://docs.oracle.com/en/java/javase/21/gctuning/index.html)
+- [JEP 439 — Generational ZGC](https://openjdk.org/jeps/439)
+- [Inside Java — ZGC Live Demo](https://www.youtube.com/results?search_query=zgc+per+pekka+demo) (Per Liden talks, search YouTube).
+
+**8.2 Load Testing**
+- [k6 documentation](https://k6.io/docs/) — official, JavaScript-based.
+- [Gatling reference](https://docs.gatling.io/) — Scala/Kotlin DSL alternative.
+- [Brendan Gregg — USE Method](https://www.brendangregg.com/usemethod.html) — performance analysis methodology.
+
+**8.3 GraalVM Native Image**
+- [Spring Boot — GraalVM Native Image Reference](https://docs.spring.io/spring-boot/reference/packaging/native-image/index.html)
+- [GraalVM — Native Image Reference](https://www.graalvm.org/latest/reference-manual/native-image/)
+- [Spring Framework — AOT Engine](https://docs.spring.io/spring-framework/reference/core/aot.html)
+
+---
+
+### Module 9 — Architecture Patterns
+
+**9.1 CQRS**
+- [Martin Fowler — CQRS](https://martinfowler.com/bliki/CQRS.html) — definition gốc.
+- [Greg Young — CQRS Documents](https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf) — deep paper từ tác giả CQRS.
+- [Microsoft — CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)
+
+**9.2 Event Sourcing**
+- [Martin Fowler — Event Sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)
+- [Microsoft — Event Sourcing pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing)
+- [Confluent — Event Sourcing with Kafka](https://www.confluent.io/blog/event-sourcing-cqrs-stream-processing-apache-kafka-whats-connection/)
+
+**9.3 Hexagonal Architecture**
+- [Alistair Cockburn — Original Hexagonal Architecture paper](https://alistair.cockburn.us/hexagonal-architecture)
+- [Updated Edition (2025) PDF — Cockburn & Garrido de Paz](https://alistaircockburn.com/hexarch%20v1.1b%20DIFFS%2020250420-1012%20paper+epub.docx.pdf)
+- [Netflix Tech Blog — Ready for changes with Hexagonal Architecture](https://netflixtechblog.com/ready-for-changes-with-hexagonal-architecture-b315ec967749)
+- [ArchUnit User Guide](https://www.archunit.org/userguide/html/000_Index.html) — enforce architecture rules.
+
+---
+
+### Module 10 — DevOps & Production
+
+**10.1 Helm**
+- [Helm — Best Practices](https://helm.sh/docs/chart_best_practices/)
+- [Helm — Chart Template Guide](https://helm.sh/docs/chart_template_guide/)
+
+**10.2 Contract Testing — Pact**
+- [Pact JVM documentation](https://docs.pact.io/implementation_guides/jvm)
+- [Pact — Consumer-Driven Contracts (concept)](https://docs.pact.io/getting_started/about_pact)
+
+**10.3 SonarQube**
+- [SonarQube — Quality Gates](https://docs.sonarsource.com/sonarqube/latest/user-guide/quality-gates/)
+
+**10.4 ArgoCD & GitOps**
+- [Argo CD — Best Practices](https://argo-cd.readthedocs.io/en/stable/user-guide/best_practices/)
+- [Argo CD — Declarative Setup](https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/)
+- [OpenGitOps Principles](https://opengitops.dev/) — định nghĩa chính thức GitOps (4 principles).
+- [Argo Rollouts — Progressive Delivery](https://argoproj.github.io/argo-rollouts/) — canary, blue-green.
+
+**10.5 Knative**
+- [Knative Serving documentation](https://knative.dev/docs/serving/)
+- [Knative Eventing documentation](https://knative.dev/docs/eventing/)
+- [Knative Broker for Apache Kafka](https://knative.dev/docs/eventing/brokers/broker-types/kafka-broker/)
+- [Knative Apache Kafka Source](https://knative.dev/docs/eventing/sources/kafka-source/)
+- [CloudEvents specification](https://cloudevents.io/) — chuẩn CNCF cho event format.
+
+**10.6 AWS**
+- [AWS — Amazon EKS Best Practices Guide](https://aws.github.io/aws-eks-best-practices/)
+- [AWS Prescriptive Guidance — Cloud Design Patterns](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/welcome.html)
+- [AWS — RDS PostgreSQL best practices](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_BestPractices.html)
+- [AWS — MSK best practices](https://docs.aws.amazon.com/msk/latest/developerguide/bestpractices.html)
+
+---
+
+### Cross-Cutting — Books (đáng mua/đọc cả cuốn)
+
+- **Designing Data-Intensive Applications** — Martin Kleppmann. Bible cho distributed systems.
+- **Release It! (2nd ed)** — Michael Nygard. Production patterns: Circuit Breaker, Bulkhead, Steady State.
+- **Building Microservices (2nd ed)** — Sam Newman.
+- **Cloud Native Spring in Action** — Thomas Vitale. Reference cho stack chính của project này.
+- **Kafka: The Definitive Guide (2nd ed)** — Confluent team.
+- **Site Reliability Engineering** (free online: https://sre.google/books/) — Google SRE book.

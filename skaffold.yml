@@ -24,6 +24,12 @@ build:
         builder: paketobuildpacks/builder-jammy-base
         env:
           - BP_JVM_VERSION=21.*
+    - image: pxloc97/search-service
+      context: search-service
+      buildpacks:
+        builder: paketobuildpacks/builder-jammy-base
+        env:
+          - BP_JVM_VERSION=21.*
 manifests:
   rawYaml:
     - config-service/k8s/deployment.yml
@@ -36,6 +42,9 @@ manifests:
     - dispatcher-service/k8s/service.yml
     - inventory-service/k8s/deployment.yml
     - inventory-service/k8s/service.yml
+    - polar-deployment/kubernetes/local/elasticsearch.yml
+    - search-service/k8s/deployment.yml
+    - search-service/k8s/service.yml
 deploy:
   kubectl: {}
 profiles:

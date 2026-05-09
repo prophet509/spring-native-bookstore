@@ -1,4 +1,4 @@
-package com.locpham.bookstore.searchservice.application.in;
+package com.locpham.bookstore.searchservice.application.out.search;
 
 import com.locpham.bookstore.searchservice.domain.BookDocument;
 import com.locpham.bookstore.searchservice.domain.SearchPage;
@@ -6,8 +6,8 @@ import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface SearchBookUseCase {
-    Mono<SearchPage<BookDocument>> search(String query, Pageable pageable);
+public interface SearchQuery {
+    Mono<SearchPage<BookDocument>> searchByTitle(String title, Pageable pageable);
 
     Mono<SearchPage<BookDocument>> searchByAuthor(String author, Pageable pageable);
 

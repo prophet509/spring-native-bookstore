@@ -77,6 +77,14 @@ kubectl wait --context "$KUBE_CONTEXT" \
   --for=condition=available deployment/polar-redis \
   --timeout=180s
 
+printf "\n📦 Deploying Elasticsearch...\n"
+kubectl apply --context "$KUBE_CONTEXT" -f polar-deployment/kubernetes/local/elasticsearch.yml
+
+printf "\n⌛ Waiting for Elasticsearch to be ready...\n"
+kubectl wait --context "$KUBE_CONTEXT" \
+  --for=condition=available deployment/elasticsearch \
+  --timeout=300s
+
 printf "\n📦 Deploying Kafka...\n"
 kubectl apply --context "$KUBE_CONTEXT" -f polar-deployment/kubernetes/local/kafka.yml
 

@@ -1,36 +1,81 @@
 package com.locpham.bookstore.searchservice.adapter.in.messaging.message.kafka;
 
-import com.locpham.bookstore.searchservice.application.out.message.BookEventPublisher;
-import com.locpham.bookstore.searchservice.domain.BookDocument;
+import com.locpham.bookstore.searchservice.adapter.in.messaging.message.kafka.message.BookCreatedMessage;
+import com.locpham.bookstore.searchservice.adapter.in.messaging.message.kafka.message.BookDeletedMessage;
+import com.locpham.bookstore.searchservice.adapter.in.messaging.message.kafka.message.BookUpdatedMessage;
+import com.locpham.bookstore.searchservice.application.out.persistence.BookIndexRepository;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Configuration
+public class KafkaBookEventPublisher {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaBookEventPublisher.class);
 
-@Component
-public class KafkaBookEventPublisher implements BookEventPublisher {
-    private Logger logger = LoggerFactory.getLogger(KafkaBookEventPublisher.class);
-
-    private final StreamBridge streamBridge;
-
-    public KafkaBookEventPublisher(StreamBridge streamBridge) {
-        this.streamBridge = streamBridge;
+    @Bean
+    public Function<Flux<BookCreatedMessage>, Mono<Void>> handleBookCreated(
+            BookIndexRepository bookIndexRepository) {
+        return flux ->
+                flux.doOnNext(m -> LOGGER.info("book.created: {}", m.isbn()))
+                        .flatMap(
+                                m ->
+                                        bookIndexRepository
+                                                .save(m.toDomain())
+                                                .onErrorMap(
+                                                        e -> {
+                                                            LOGGER.error(
+                                                                    "Failed to save book: {}",
+                                                                    m.isbn(),
+                                                                    e);
+                                                            return e;
+                                                        }))
+                        .doOnError(e -> LOGGER.error("Error in handleBookCreated", e))
+                        .then();
     }
 
-    @Override
-    public Mono<Void> publishBookCreated(BookDocument book) {
-        return streamBridge.send("")
+    @Bean
+    public Function<Flux<BookUpdatedMessage>, Mono<Void>> handleBookUpdated(
+            BookIndexRepository bookIndexRepository) {
+        return flux ->
+                flux.doOnNext(m -> LOGGER.info("book.updated: {}", m.isbn()))
+                        .flatMap(
+                                m ->
+                                        bookIndexRepository
+                                                .save(m.toDomain())
+                                                .onErrorMap(
+                                                        e -> {
+                                                            LOGGER.error(
+                                                                    "Failed to update book: {}",
+                                                                    m.isbn(),
+                                                                    e);
+                                                            return e;
+                                                        }))
+                        .doOnError(e -> LOGGER.error("Error in handleBookUpdated", e))
+                        .then();
     }
 
-    @Override
-    public void publishBookUpdated(BookDocument book) {
-
-    }
-
-    @Override
-    public void publishBookDeleted(String isbn) {
-
+    @Bean
+    public Function<Flux<BookDeletedMessage>, Mono<Void>> handleBookDeleted(
+            BookIndexRepository bookIndexRepository) {
+        return flux ->
+                flux.doOnNext(m -> LOGGER.info("book.deleted: {}", m.isbn()))
+                        .flatMap(
+                                m ->
+                                        bookIndexRepository
+                                                .deleteByIsbn(m.isbn())
+                                                .onErrorMap(
+                                                        e -> {
+                                                            LOGGER.error(
+                                                                    "Failed to delete book: {}",
+                                                                    m.isbn(),
+                                                                    e);
+                                                            return e;
+                                                        }))
+                        .doOnError(e -> LOGGER.error("Error in handleBookDeleted", e))
+                        .then();
     }
 }

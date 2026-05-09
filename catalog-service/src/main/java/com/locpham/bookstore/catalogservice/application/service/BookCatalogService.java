@@ -4,6 +4,7 @@ import com.locpham.bookstore.catalogservice.application.port.in.AddBookUseCase;
 import com.locpham.bookstore.catalogservice.application.port.in.EditBookUseCase;
 import com.locpham.bookstore.catalogservice.application.port.in.ViewBookDetailUseCase;
 import com.locpham.bookstore.catalogservice.application.port.in.ViewListBookUseCase;
+import com.locpham.bookstore.catalogservice.application.port.out.BookEventPublisher;
 import com.locpham.bookstore.catalogservice.application.port.out.BookRepository;
 import com.locpham.bookstore.catalogservice.domain.book.Book;
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookAlreadyExistsException;
@@ -13,10 +14,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class BookCatalogService
         implements ViewListBookUseCase, ViewBookDetailUseCase, AddBookUseCase, EditBookUseCase {
-    private BookRepository bookRepository;
+    private final BookRepository bookRepository;
+    private final BookEventPublisher publisher;
 
-    public BookCatalogService(BookRepository bookRepository) {
+    public BookCatalogService(BookRepository bookRepository, BookEventPublisher publisher) {
         this.bookRepository = bookRepository;
+        this.publisher = publisher;
     }
 
     @Override
@@ -28,17 +31,11 @@ public class BookCatalogService
         }
 
         var existing = bookRepository.findByIsbn(isbn).orElseThrow();
-        var updated =
-                new Book(
-                        existing.id(),
-                        isbn,
-                        book.title() != null ? book.title() : existing.title(),
-                        book.author() != null ? book.author() : existing.author(),
-                        book.price() != null ? book.price() : existing.price(),
-                        book.publisher() != null ? book.publisher() : existing.publisher(),
-                        existing.auditMetadata());
+        var updated = existing.updateWith(book);
 
-        return bookRepository.save(updated);
+        var saved = bookRepository.save(updated);
+        publisher.publishBookUpdated(saved).block();
+        return saved;
     }
 
     @Override
@@ -48,6 +45,7 @@ public class BookCatalogService
         }
 
         bookRepository.deleteByIsbn(isbn);
+        publisher.publishBookDeleted(isbn).block();
     }
 
     @Override
@@ -66,6 +64,8 @@ public class BookCatalogService
             throw new BookAlreadyExistsException(book.isbn());
         }
 
-        return bookRepository.save(book);
+        var saved = bookRepository.save(book);
+        publisher.publishBookCreated(saved).block();
+        return saved;
     }
 }

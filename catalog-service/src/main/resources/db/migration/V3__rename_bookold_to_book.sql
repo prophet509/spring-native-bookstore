@@ -1,1 +1,1 @@
-ALTER TABLE bookOld RENAME TO book;
+ALTER TABLE IF EXISTS bookOld RENAME TO book;

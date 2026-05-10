@@ -1,7 +1,7 @@
-ALTER TABLE bookOld
+ALTER TABLE book
     ADD COLUMN IF NOT EXISTS publisher VARCHAR(255);
 
-UPDATE bookOld SET publisher = 'Polarsophia' WHERE publisher IS NULL;
+UPDATE book SET publisher = 'Polarsophia' WHERE publisher IS NULL;
 
-ALTER TABLE bookOld
+ALTER TABLE book
     ALTER COLUMN publisher SET NOT NULL;

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS bookOld (
+CREATE TABLE IF NOT EXISTS book (
     id BIGSERIAL PRIMARY KEY,
     isbn VARCHAR(255) UNIQUE NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS bookOld (
     version INTEGER NOT NULL DEFAULT 0
 );
 
-INSERT INTO bookOld (isbn, title, author, price, created_date, last_modified_date, version)
+INSERT INTO book (isbn, title, author, price, created_date, last_modified_date, version)
 SELECT '1234567890', 'Polar Journey', 'Iorek Polarson', 12.90, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0
-WHERE NOT EXISTS (SELECT 1 FROM bookOld WHERE isbn = '1234567890');
+WHERE NOT EXISTS (SELECT 1 FROM book WHERE isbn = '1234567890');

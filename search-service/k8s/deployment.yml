@@ -22,12 +22,31 @@ spec:
         - name: search-service
           image: pxloc97/search-service:0.0.1-SNAPSHOT
           imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 9005
+            initialDelaySeconds: 5
+            periodSeconds: 15
           lifecycle:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 9005
+          resources:
+            requests:
+              memory: "756Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
           env:
             - name: BPL_JAVA_NMT_ENABLED
               value: "false"

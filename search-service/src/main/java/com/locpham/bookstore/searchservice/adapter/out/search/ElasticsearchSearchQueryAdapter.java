@@ -100,7 +100,7 @@ public class ElasticsearchSearchQueryAdapter implements SearchQuery {
     public Mono<SearchPage<BookDocument>> searchAll(Pageable pageable) {
         Mono<List<BookDocument>> dataMono =
                 elasticsearchRepository
-                        .findAll(pageable)
+                        .findAllBy(pageable)
                         .map(ElasticsearchBookDocument::toDomain)
                         .collectList();
         Mono<Long> countMono = elasticsearchRepository.count();
@@ -117,11 +117,15 @@ public class ElasticsearchSearchQueryAdapter implements SearchQuery {
 
     @Override
     public Flux<String> suggestByTitle(String prefix) {
-        return elasticsearchRepository.findTitlesByTitleStartingWith(prefix);
+        return elasticsearchRepository
+                .findTitlesByTitleStartingWith(prefix)
+                .map(ElasticsearchBookDocument::title);
     }
 
     @Override
     public Flux<String> suggestByAuthor(String prefix) {
-        return elasticsearchRepository.findAuthorsByAuthorStartingWith(prefix);
+        return elasticsearchRepository
+                .findAuthorsByAuthorStartingWith(prefix)
+                .map(ElasticsearchBookDocument::author);
     }
 }

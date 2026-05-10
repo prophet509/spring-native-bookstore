@@ -32,11 +32,7 @@ public class KafkaBookEventPublisher implements BookEventPublisher {
                 bookCreatedSink,
                 "book.created",
                 new BookCreatedMessage(
-                        book.isbn(),
-                        book.title(),
-                        book.author(),
-                        book.price(),
-                        book.publisher()));
+                        book.isbn(), book.title(), book.author(), book.price(), book.publisher()));
     }
 
     @Override
@@ -45,11 +41,7 @@ public class KafkaBookEventPublisher implements BookEventPublisher {
                 bookUpdatedSink,
                 "book.updated",
                 new BookUpdatedMessage(
-                        book.isbn(),
-                        book.title(),
-                        book.author(),
-                        book.price(),
-                        book.publisher()));
+                        book.isbn(), book.title(), book.author(), book.price(), book.publisher()));
     }
 
     @Override

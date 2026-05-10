@@ -2,6 +2,7 @@ package com.locpham.bookstore.searchservice.adapter.out;
 
 import com.locpham.bookstore.searchservice.adapter.out.persistence.elaticsearch.ElasticsearchBookDocument;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.annotations.Query;
 import org.springframework.data.elasticsearch.repository.ReactiveElasticsearchRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,9 +25,11 @@ public interface ElasticsearchRepository
 
     Mono<Long> countByIsbn(String isbn);
 
-    Flux<ElasticsearchBookDocument> findAll(Pageable pageable);
+    Flux<ElasticsearchBookDocument> findAllBy(Pageable pageable);
 
-    Flux<String> findTitlesByTitleStartingWith(String prefix);
+    @Query("{\"bool\": {\"should\": [{\"match_phrase_prefix\": {\"title\": \"?0\"}}]}}}")
+    Flux<ElasticsearchBookDocument> findTitlesByTitleStartingWith(String prefix);
 
-    Flux<String> findAuthorsByAuthorStartingWith(String prefix);
+    @Query("{\"bool\": {\"should\": [{\"match_phrase_prefix\": {\"author\": \"?0\"}}]}}}")
+    Flux<ElasticsearchBookDocument> findAuthorsByAuthorStartingWith(String prefix);
 }

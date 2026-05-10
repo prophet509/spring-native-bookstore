@@ -19,7 +19,9 @@ class TestcontainersConfiguration {
     @Bean
     @ServiceConnection
     ElasticsearchContainer elasticsearchContainer() {
-        return new ElasticsearchContainer(DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:8.13.0"))
+        return new ElasticsearchContainer(
+                        DockerImageName.parse(
+                                "docker.elastic.co/elasticsearch/elasticsearch:9.2.8"))
                 .withEnv("disk.watermark.low", "98%")
                 .withEnv("disk.watermark.high", "99%")
                 .withEnv("disk.watermark.flood_stage", "99.5%");

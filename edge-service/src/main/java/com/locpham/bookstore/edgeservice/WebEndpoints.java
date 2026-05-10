@@ -20,6 +20,21 @@ public class WebEndpoints {
                 .POST(
                         "/catalog-fallback",
                         request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).build())
+                .GET(
+                        "/order-fallback",
+                        request -> ServerResponse.ok().body(Mono.just(""), String.class))
+                .POST(
+                        "/order-fallback",
+                        request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).build())
+                .GET(
+                        "/inventory-fallback",
+                        request -> ServerResponse.ok().body(Mono.just(""), String.class))
+                .POST(
+                        "/inventory-fallback",
+                        request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).build())
+                .GET(
+                        "/search-fallback",
+                        request -> ServerResponse.ok().body(Mono.just("[]"), String.class))
                 .build();
     }
 }

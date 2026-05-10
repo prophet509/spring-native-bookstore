@@ -75,6 +75,25 @@ spring:
                 - name: CircuitBreaker
                   args:
                     name: orderCircuitBreaker
+                    fallbackUri: forward:/order-fallback
+            - id: inventory-route
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:9004}
+              predicates:
+                - Path=/inventory,/inventory/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: inventoryCircuitBreaker
+                    fallbackUri: forward:/inventory-fallback
+            - id: search-route
+              uri: ${SEARCH_SERVICE_URL:http://localhost:9005}
+              predicates:
+                - Path=/search,/search/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: searchCircuitBreaker
+                    fallbackUri: forward:/search-fallback
 
 resilience4j:
   circuitbreaker:

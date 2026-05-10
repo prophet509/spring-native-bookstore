@@ -139,67 +139,7 @@ This project is indexed by GitNexus as **spring-native-bookstore** (1526 symbols
 <claude-mem-context>
 # Memory Context
 
-# [spring-native-bookstore] recent context, 2026-04-28 6:05pm GMT+9
+# [spring-native-bookstore] recent context, 2026-05-10 3:32pm GMT+7
 
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
-
-Stats: 50 obs (20,995t read) | 0t work
-
-### Apr 28, 2026
-157 4:23p 🔵 ConnectionFactoryOptionsInitializer not found in Spring Boot autoconfigure JAR
-158 " 🔵 ConnectionFactoryOptionsInitializer not found in Gradle cache
-159 " 🔵 Testcontainers disabledWithoutDocker Configuration Explained
-S2 Explained @Testcontainers(disabledWithoutDocker = true) purpose and completed final code formatting fixes for order-service tests (Apr 28, 4:23 PM)
-S1 Explained @Testcontainers(disabledWithoutDocker = true) annotation and continued order-inventory integration test configuration work (Apr 28, 4:23 PM)
-S3 Explained @Testcontainers(disabledWithoutDocker = true) annotation purpose and completed final code formatting fixes for order-service tests (Apr 28, 4:25 PM)
-160 4:31p 🔵 Spring Boot JDBC Auto-Configuration Classes in 4.0.3
-161 4:32p 🔴 Added JDBC DataSource Auto-Configuration Exclusions to Kafka Test
-162 4:33p 🔴 Fixed Spotless Formatting Violations in Order-Service
-163 4:39p 🔵 Docker Available and Running on Development Machine
-164 " ✅ Removed @Testcontainers disabledWithoutDocker Parameter from OrderControllerTest
-S4 Removed @Testcontainers disabledWithoutDocker parameter from all test classes, encountered Docker API version mismatch failure, investigated root cause (Apr 28, 4:39 PM)
-165 4:40p 🔴 Upgraded Testcontainers from 1.19.7 to 1.21.4 to Fix Docker API Compatibility
-167 " 🔴 Testcontainers 1.21.4 Upgrade Fixes Docker API Compatibility
-166 4:41p 🔵 Running Testcontainers Test After Upgrading to 1.21.4
-168 4:43p 🔵 InputDestination getChannelByName Returns Null for handleInventoryDecision-in-0
-169 " 🔵 Test Resources Application.yml Does Not Override Spring Cloud Function Definition
-170 4:45p 🔴 Added Spring Cloud Function Definition to Test Application Configuration
-171 " 🔴 Added Spring Cloud Stream Test Binder Configuration to Fix Test Binding
-172 4:46p 🔴 Fixed Order Version Bumping in accept() and reject() Methods
-173 " 🔴 OrderServiceApplicationTests Pass After Fixing Order Version Increment
-174 4:47p 🔵 OrderControllerTest and JooqOrderRepositoryImplTest Fail After Version Increment Fix
-175 " 🔵 Spring Assert.state() Failure at Spring Core Assert.java:80
-176 " 🔵 Spring Cloud Stream Binding Failure Due to Missing Test Binder
-177 4:48p 🔵 Root Cause: Unknown Binder Configuration test - Missing TestChannelBinderConfiguration Import
-178 " 🔴 Removed spring.cloud.stream.defaultBinder: test from Test Application Configuration
-180 " 🔵 Inventory-Service Tests Fail with NullPointerException After Testcontainers Upgrade
-179 4:49p 🔴 All Order-Service Tests Pass After Removing Invalid Test Binder Configuration
-181 4:50p 🔵 Gradle test execution blocked by network permission error
-182 5:01p 🔵 Gradle network permission error rooted in Java SocketException
-183 5:15p 🔵 Gradle network permission issue resolved with elevated permissions
-184 " 🔵 OrderEventConsumerTest duplicate handling test fails with AssertionError
-185 5:16p 🔴 Order-service test binding configuration fixed
-186 5:17p 🔴 Inventory-service test flakiness resolved with output channel draining
-187 5:34p 🔵 Infrastructure mismatch: Services use Kafka but local K8s deployment configures RabbitMQ
-188 " 🔵 Kafka manifest exists but RabbitMQ reference remains in skaffold.yml
-189 " 🔵 Kubernetes service deployments correctly configured for Kafka
-190 " ✅ Skaffold configuration updated to use Kafka instead of RabbitMQ
-191 " 🔵 All three Kafka-using services confirmed in Kubernetes deployments
-192 5:35p 🔵 PostgreSQL databases use separate Kubernetes deployments for each service
-193 " ✅ Infrastructure migration from RabbitMQ to Kafka completed across all configuration files
-194 " ✅ Kafka deployment integrated into cluster creation script
-195 " ✅ README.md documentation updated for inventory-service and dispatcher-service
-196 5:37p ✅ inventory-service port changed from 9003 to 9004 to resolve port conflict
-197 5:38p ✅ Docker Compose configuration updated for inventory-service port change
-198 " 🔴 OrderEventConsumerTest refactored to verify state-level idempotency instead of event publication behavior
-200 5:55p 🔴 OrderEventConsumerTest updated to use Spring Cloud Stream binding names instead of destination names
-202 " 🔵 InputDestination.getChannelByName() returns null for binding names
-201 5:56p 🔵 Spring Cloud Stream Test Binder binding name usage causes NullPointerException
-204 5:57p 🔴 OrderEventConsumerTest passes after reverting to destination names and refactoring for state-level idempotency
-205 " 🔴 OrderEventConsumerTest fully passes with both tests succeeding after destination name revert and test structure improvements
-203 5:58p 🔴 OrderEventConsumerTest reverted to use destination names after binding names caused NullPointerException
-206 6:02p 🔵 Full inventory-service test suite shows 1 failure out of 31 tests
-207 " 🔵 OrderEventConsumerTest fails in full suite but passes in isolation due to test interference
+No previous sessions found.
 </claude-mem-context>

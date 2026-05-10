@@ -1,5 +1,6 @@
 server:
-  port: 8888
+  port: ${SERVER_PORT:8888}
+  shutdown: graceful
   tomcat:
     connection-timeout: 2s
     threads:
@@ -9,19 +10,18 @@ server:
 spring:
   application:
     name: config-service
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
   security:
     user:
-      name: user
-      password: password
-  logging:
-    level:
-      org.springframework.security: DEBUG
+      name: ${SPRING_SECURITY_USER_NAME:user}
+      password: ${SPRING_SECURITY_USER_PASSWORD:password}
   cloud:
     config:
       server:
         git:
-          uri: https://github.com/prophet509/spring-native-bookstore.git
-          default-label: main
+          uri: ${CONFIG_GIT_URI:https://github.com/prophet509/spring-native-bookstore.git}
+          default-label: ${CONFIG_GIT_BRANCH:main}
           search-paths: config
           timeout: 5
           clone-on-start: true
@@ -40,6 +40,9 @@ management:
       show-components: always
       probes:
         enabled: true
+      group:
+        readiness:
+          include: readinessState
   metrics:
     tags:
       application: ${spring.application.name}
@@ -47,3 +50,14 @@ management:
 logging:
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: ${SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS:file:./config}

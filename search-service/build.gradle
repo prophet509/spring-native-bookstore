@@ -37,6 +37,8 @@ dependencies {
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-webflux-test'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.springframework.cloud:spring-cloud-stream-test-binder'
@@ -65,5 +67,17 @@ spotless {
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
+    }
+}
+
+bootBuildImage {
+    imageName = "pxloc97/${project.name}:${project.version}"
+    environment = ["BP_JVM_VERSION": "21.*"]
+    docker {
+        publishRegistry {
+            username = project.findProperty("registryUsername")
+            password = project.findProperty("registryToken")
+            url = project.findProperty("registryUrl")
+        }
     }
 }

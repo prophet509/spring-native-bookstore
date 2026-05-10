@@ -154,6 +154,8 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
       - CATALOG_SERVICE_URL=http://catalog-service:9001
       - ORDER_SERVICE_URL=http://order-service:9002
+      - INVENTORY_SERVICE_URL=http://inventory-service:9004
+      - SEARCH_SERVICE_URL=http://search-service:9005
       - SPA_URL=http://polar-ui:9004
       - KEYCLOAK_URL=http://host.docker.internal:8080
     logging:

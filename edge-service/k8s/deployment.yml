@@ -51,6 +51,10 @@ spec:
               value: "http://catalog-service"
             - name: ORDER_SERVICE_URL
               value: "http://order-service:9002"
+            - name: INVENTORY_SERVICE_URL
+              value: "http://inventory-service:9004"
+            - name: SEARCH_SERVICE_URL
+              value: "http://search-service:9005"
             - name: SPA_URL
               value: "http://polar-ui"
             - name: SPRING_REDIS_HOST

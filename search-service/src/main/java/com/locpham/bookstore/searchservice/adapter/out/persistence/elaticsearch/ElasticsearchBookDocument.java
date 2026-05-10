@@ -4,7 +4,7 @@ import com.locpham.bookstore.searchservice.domain.BookDocument;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.*;
 
-@Document(indexName = "books")
+@Document(indexName = "books", createIndex = false)
 public record ElasticsearchBookDocument(
         @Id String isbn,
         @MultiField(

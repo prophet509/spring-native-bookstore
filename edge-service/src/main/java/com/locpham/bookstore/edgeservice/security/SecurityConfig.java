@@ -38,6 +38,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .pathMatchers(HttpMethod.GET, "/books/**")
                                         .permitAll()
+                                        .pathMatchers(HttpMethod.GET, "/search/**")
+                                        .permitAll()
                                         .anyExchange()
                                         .authenticated())
                 .exceptionHandling(

@@ -1,5 +1,6 @@
 package com.locpham.bookstore.catalogservice.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,14 +9,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(
+            HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter)
+            throws Exception {
         return http.authorizeHttpRequests(
                         authorize ->
                                 authorize
@@ -30,7 +32,7 @@ public class SecurityConfig {
                                 oauth2.jwt(
                                         jwt ->
                                                 jwt.jwtAuthenticationConverter(
-                                                        jwtAuthenticationConverter())))
+                                                        jwtAuthenticationConverter)))
                 .sessionManagement(
                         sessionManagement ->
                                 sessionManagement.sessionCreationPolicy(
@@ -40,13 +42,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtAuthenticationConverter jwtAuthenticationConverter() {
-        var grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
-
+    JwtAuthenticationConverter jwtAuthenticationConverter(
+            @Value("${polar.keycloak.client-id:}") String clientId) {
         var authenticationConverter = new JwtAuthenticationConverter();
-        authenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        authenticationConverter.setJwtGrantedAuthoritiesConverter(
+                new KeycloakJwtAuthoritiesConverter(clientId));
         return authenticationConverter;
     }
 }

@@ -16,7 +16,7 @@ import reactor.test.StepVerifier;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class JooqOrderRepositoryImplTest {
 
     @MockitoBean private ReactiveJwtDecoder reactiveJwtDecoder;

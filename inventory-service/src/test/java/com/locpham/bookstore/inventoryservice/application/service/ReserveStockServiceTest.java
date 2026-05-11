@@ -3,6 +3,8 @@ package com.locpham.bookstore.inventoryservice.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.locpham.bookstore.inventoryservice.application.port.in.ReserveStockUseCase;
 import com.locpham.bookstore.inventoryservice.application.port.out.InventoryEventPublisher;
@@ -10,6 +12,7 @@ import com.locpham.bookstore.inventoryservice.application.port.out.InventoryPort
 import com.locpham.bookstore.inventoryservice.application.port.out.ReservationPort;
 import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
+import com.locpham.bookstore.inventoryservice.domain.Reservation;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -45,6 +48,7 @@ class ReserveStockServiceTest {
         InventoryItem item1 = new InventoryItem(1L, "123", 10, 0, 0);
         InventoryItem item2 = new InventoryItem(2L, "456", 5, 0, 0);
 
+        given(reservationPort.findByOrderId(orderId)).willReturn(Flux.empty());
         given(inventoryPort.findAllByIsbn(List.of("123", "456")))
                 .willReturn(Flux.just(item1, item2));
         given(inventoryPort.saveAll(any()))
@@ -71,6 +75,7 @@ class ReserveStockServiceTest {
 
         InventoryItem item = new InventoryItem(1L, "123", 10, 0, 0);
 
+        given(reservationPort.findByOrderId(orderId)).willReturn(Flux.empty());
         given(inventoryPort.findAllByIsbn(List.of("123"))).willReturn(Flux.just(item));
         given(eventPublisher.publishInventoryDecision(any())).willReturn(Mono.empty());
 
@@ -91,6 +96,7 @@ class ReserveStockServiceTest {
                 new ReserveStockUseCase.OrderReserveRequest(
                         orderId, List.of(new ReserveStockUseCase.OrderItem("999", 1)));
 
+        given(reservationPort.findByOrderId(orderId)).willReturn(Flux.empty());
         given(inventoryPort.findAllByIsbn(List.of("999"))).willReturn(Flux.empty());
         given(eventPublisher.publishInventoryDecision(any())).willReturn(Mono.empty());
 
@@ -102,5 +108,27 @@ class ReserveStockServiceTest {
                             assertThat(decision.reason()).contains("No inventory found");
                         })
                 .verifyComplete();
+    }
+
+    @Test
+    void reserveForOrder_whenAlreadyReserved_shouldNotReserveAgain() {
+        UUID orderId = UUID.randomUUID();
+        var request =
+                new ReserveStockUseCase.OrderReserveRequest(
+                        orderId, List.of(new ReserveStockUseCase.OrderItem("123", 2)));
+
+        given(reservationPort.findByOrderId(orderId))
+                .willReturn(Flux.just(Reservation.create(orderId, "123", 2)));
+
+        StepVerifier.create(reserveStockService.reserveForOrder(request))
+                .assertNext(
+                        decision -> {
+                            assertThat(decision.orderId()).isEqualTo(orderId);
+                            assertThat(decision.status())
+                                    .isEqualTo(InventoryDecision.DecisionStatus.RESERVED);
+                        })
+                .verifyComplete();
+
+        verify(inventoryPort, never()).findAllByIsbn(any());
     }
 }

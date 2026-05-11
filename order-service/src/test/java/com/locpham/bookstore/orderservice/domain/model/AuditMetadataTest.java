@@ -24,8 +24,9 @@ class AuditMetadataTest {
     }
 
     @Test
-    void update_shouldKeepCreatedDateAndUpdateLastModifiedDate() {
+    void update_shouldKeepCreatedDateAndUpdateLastModifiedDate() throws InterruptedException {
         var original = AuditMetadata.init();
+        Thread.sleep(1);
         var updated = original.update();
 
         assertEquals(original.createdDate(), updated.createdDate());

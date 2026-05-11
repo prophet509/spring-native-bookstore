@@ -3,42 +3,33 @@ package com.locpham.bookstore.inventoryservice.adapter.in.web;
 import static org.mockito.BDDMockito.given;
 
 import com.locpham.bookstore.inventoryservice.application.port.in.ManageStockUseCase;
+import com.locpham.bookstore.inventoryservice.bootstrap.config.SecurityConfig;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.context.ApplicationContext;
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
-@SpringBootTest(
-        webEnvironment = WebEnvironment.RANDOM_PORT,
+@WebFluxTest(
+        value = InventoryController.class,
         properties = {
-            "spring.flyway.enabled=false",
-            "spring.r2dbc.enabled=false",
             "spring.cloud.config.enabled=false",
-            "spring.cloud.stream.enabled=false"
+            "spring.cloud.config.fail-fast=false",
+            "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost/test"
         })
+@Import(SecurityConfig.class)
 class InventoryControllerTest {
 
-    @Autowired private ApplicationContext context;
-
-    private WebTestClient webTestClient;
+    @Autowired private WebTestClient webTestClient;
 
     @MockitoBean private ManageStockUseCase manageStockUseCase;
 
     @MockitoBean private ReactiveJwtDecoder jwtDecoder;
-
-    @BeforeEach
-    void setUp() {
-        this.webTestClient =
-                WebTestClient.bindToApplicationContext(context).configureClient().build();
-    }
 
     @Test
     void getStock_shouldReturnItem() {
@@ -59,7 +50,7 @@ class InventoryControllerTest {
     }
 
     @Test
-    void adjustStock_whenMissingDelta_thenBadRequest() {
+    void adjustStock_withoutJwtEvenWithInvalidBody_thenUnauthorized() {
         webTestClient
                 .post()
                 .uri("/inventory/123/adjust")
@@ -67,6 +58,18 @@ class InventoryControllerTest {
                 .bodyValue("{}")
                 .exchange()
                 .expectStatus()
-                .isBadRequest();
+                .isUnauthorized();
+    }
+
+    @Test
+    void adjustStock_withoutJwt_thenUnauthorized() {
+        webTestClient
+                .post()
+                .uri("/inventory/123/adjust")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"delta\":1}")
+                .exchange()
+                .expectStatus()
+                .isUnauthorized();
     }
 }

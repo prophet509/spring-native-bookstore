@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -26,7 +27,7 @@ import reactor.core.publisher.Mono;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({SecurityConfig.class, TestcontainersConfiguration.class})
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class OrderControllerTest {
 
     @Autowired private ApplicationContext context;
@@ -71,7 +72,10 @@ class OrderControllerTest {
         OrderRequest orderRequest = new OrderRequest("0987654321", 2);
 
         webTestClient
-                .mutateWith(mockJwt().jwt(builder -> builder.subject("user-test")))
+                .mutateWith(
+                        mockJwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_customer"))
+                                .jwt(builder -> builder.subject("user-test")))
                 .post()
                 .uri("/orders")
                 .bodyValue(orderRequest)
@@ -101,7 +105,10 @@ class OrderControllerTest {
         OrderRequest invalidOrderRequest = new OrderRequest("", 0); // Invalid ISBN and quantity
 
         webTestClient
-                .mutateWith(mockJwt().jwt(builder -> builder.subject("user-test")))
+                .mutateWith(
+                        mockJwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_customer"))
+                                .jwt(builder -> builder.subject("user-test")))
                 .post()
                 .uri("/orders")
                 .bodyValue(invalidOrderRequest)

@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -39,7 +40,7 @@ import reactor.test.StepVerifier;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({TestcontainersConfiguration.class, TestChannelBinderConfiguration.class})
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class OrderServiceApplicationTests {
 
     private static MockWebServer mockWebServer;
@@ -99,7 +100,10 @@ class OrderServiceApplicationTests {
 
         // Submit order
         webClient
-                .mutateWith(mockJwt().jwt(jwt -> jwt.subject("test-user")))
+                .mutateWith(
+                        mockJwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_customer"))
+                                .jwt(jwt -> jwt.subject("test-user")))
                 .post()
                 .uri("/orders")
                 .bodyValue(request)

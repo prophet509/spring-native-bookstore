@@ -40,6 +40,33 @@ public class ReserveStockService implements ReserveStockUseCase {
         List<String> isbns =
                 request.items().stream().map(OrderItem::isbn).collect(Collectors.toList());
 
+        return reservationPort
+                .findByOrderId(request.orderId())
+                .hasElements()
+                .flatMap(
+                        alreadyReserved -> {
+                            if (alreadyReserved) {
+                                return Mono.just(InventoryDecision.reserved(request.orderId()));
+                            }
+                            return reserveAvailableStock(request, isbns);
+                        })
+                .onErrorResume(
+                        InsufficientStockException.class,
+                        e -> {
+                            logger.warn(
+                                    "Stock reservation failed for order {}: {}",
+                                    request.orderId(),
+                                    e.getMessage());
+                            InventoryDecision rejected =
+                                    InventoryDecision.rejected(request.orderId(), e.getMessage());
+                            return eventPublisher
+                                    .publishInventoryDecision(rejected)
+                                    .thenReturn(rejected);
+                        });
+    }
+
+    private Mono<InventoryDecision> reserveAvailableStock(
+            OrderReserveRequest request, List<String> isbns) {
         return inventoryPort
                 .findAllByIsbn(isbns)
                 .collectMap(InventoryItem::isbn)
@@ -102,19 +129,6 @@ public class ReserveStockService implements ReserveStockUseCase {
                                                                                             decision)
                                                                                     .thenReturn(
                                                                                             decision));
-                                                }))
-                .onErrorResume(
-                        InsufficientStockException.class,
-                        e -> {
-                            logger.warn(
-                                    "Stock reservation failed for order {}: {}",
-                                    request.orderId(),
-                                    e.getMessage());
-                            InventoryDecision rejected =
-                                    InventoryDecision.rejected(request.orderId(), e.getMessage());
-                            return eventPublisher
-                                    .publishInventoryDecision(rejected)
-                                    .thenReturn(rejected);
-                        });
+                                                }));
     }
 }

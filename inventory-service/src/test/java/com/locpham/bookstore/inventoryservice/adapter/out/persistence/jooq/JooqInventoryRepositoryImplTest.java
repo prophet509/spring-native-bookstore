@@ -19,7 +19,7 @@ import reactor.test.StepVerifier;
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {"spring.cloud.config.enabled=false", "spring.cloud.stream.enabled=false"})
 @Import(TestcontainersConfiguration.class)
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class JooqInventoryRepositoryImplTest {
 
     @Autowired private JooqInventoryRepositoryImpl inventoryRepository;

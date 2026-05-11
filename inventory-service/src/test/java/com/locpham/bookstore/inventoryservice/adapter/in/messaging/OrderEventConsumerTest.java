@@ -14,33 +14,41 @@ import com.locpham.bookstore.inventoryservice.domain.ReservationStatus;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = "spring.cloud.stream.defaultBinder=test")
 @Import({TestcontainersConfiguration.class, TestChannelBinderConfiguration.class})
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class OrderEventConsumerTest {
 
-    @Autowired private InputDestination input;
     @Autowired private OutputDestination output;
     @Autowired private JooqInventoryRepositoryImpl inventoryRepository;
     @Autowired private JooqReservationRepositoryImpl reservationRepository;
+
+    @Autowired
+    @Qualifier("reserveStock")
+    private Consumer<Flux<OrderCreatedMessage>> reserveStock;
+
+    @Autowired
+    @Qualifier("releaseStock")
+    private Consumer<Flux<OrderCancelledMessage>> releaseStock;
 
     @MockitoBean private ReactiveJwtDecoder jwtDecoder;
 
@@ -81,11 +89,7 @@ class OrderEventConsumerTest {
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
 
-        input.send(
-                MessageBuilder.withPayload(objectMapper.writeValueAsBytes(message))
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .build(),
-                "reserveStock-in-0");
+        reserveStock.accept(Flux.just(message));
 
         var out = output.receive(5000, "inventory-events");
         assertThat(out).isNotNull();
@@ -113,12 +117,7 @@ class OrderEventConsumerTest {
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem("DUP", 2)));
 
-        var payload =
-                MessageBuilder.withPayload(objectMapper.writeValueAsBytes(message))
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .build();
-
-        input.send(payload, "reserveStock-in-0");
+        reserveStock.accept(Flux.just(message));
         var first = output.receive(5000, "inventory-events");
         assertThat(first).isNotNull();
         drainOutput("inventory-events");
@@ -136,7 +135,7 @@ class OrderEventConsumerTest {
                         })
                 .verifyComplete();
 
-        input.send(payload, "reserveStock-in-0");
+        reserveStock.accept(Flux.just(message));
 
         // Duplicate events must be idempotent at the state level (inventory must not decrement
         // twice). Re-publishing the same decision event is acceptable depending on retries.
@@ -149,7 +148,7 @@ class OrderEventConsumerTest {
             assertThat(decision.status()).isEqualTo("RESERVED");
         }
 
-        StepVerifier.create(awaitStock("DUP", 8, 2))
+        StepVerifier.create(inventoryRepository.findByIsbn("DUP").timeout(Duration.ofSeconds(5)))
                 .assertNext(
                         updated -> {
                             assertThat(updated.availableQuantity()).isEqualTo(8);
@@ -169,11 +168,7 @@ class OrderEventConsumerTest {
         var createMessage =
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
-        input.send(
-                MessageBuilder.withPayload(objectMapper.writeValueAsBytes(createMessage))
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .build(),
-                "reserveStock-in-0");
+        reserveStock.accept(Flux.just(createMessage));
 
         // Verify stock đã được reserve
         StepVerifier.create(awaitStock(isbn, 8, 2))
@@ -188,11 +183,7 @@ class OrderEventConsumerTest {
 
         // Act: Send order-cancelled event
         var cancelMessage = new OrderCancelledMessage(orderId);
-        input.send(
-                MessageBuilder.withPayload(objectMapper.writeValueAsBytes(cancelMessage))
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .build(),
-                "releaseStock-in-0");
+        releaseStock.accept(Flux.just(cancelMessage));
 
         // Assert wait for invetory release
         StepVerifier.create(awaitStock(isbn, 10, 0))

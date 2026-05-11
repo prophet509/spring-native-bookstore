@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/catalog-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/catalog-service.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.locpham.bookstore.inventory-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/com.locpham.bookstore.inventory-service.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.locpham.bookstore.order-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/com.locpham.bookstore.order-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/inventory-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/inventory-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/order-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/order-service.main.iml" />
     </modules>

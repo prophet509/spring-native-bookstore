@@ -33,8 +33,9 @@ public class SubmitOrderServiceTest {
     @Test
     void whenBookExistsAndInStock_shouldSubmitOrder() {
         var isbn = "1234567890";
+        var createdBy = "isabelle";
         var book = new BookSnapshot(isbn, "Title", 9.99);
-        var command = new SubmitOrderCommand(isbn, 2);
+        var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
         given(catalogBookPort.loadBook(isbn)).willReturn(Mono.just(book));
         given(orderCommandPort.save(any(Order.class)))
@@ -47,6 +48,7 @@ public class SubmitOrderServiceTest {
                             assertThat(order.status()).isEqualTo(OrderStatus.PENDING);
                             assertThat(order.quantity()).isEqualTo(command.quantity());
                             assertThat(order.book().isbn()).isEqualTo(command.isbn());
+                            assertThat(order.audit().createdBy()).isEqualTo(createdBy);
                         })
                 .verifyComplete();
 
@@ -56,7 +58,8 @@ public class SubmitOrderServiceTest {
     @Test
     void whenBookDoesNotExist_shouldRejectOrder() {
         var isbn = "1234567890";
-        var command = new SubmitOrderCommand(isbn, 2);
+        var createdBy = "isabelle";
+        var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
         given(catalogBookPort.loadBook(isbn)).willReturn(Mono.empty());
         given(orderCommandPort.save(any(Order.class)))
@@ -68,6 +71,7 @@ public class SubmitOrderServiceTest {
                             assertThat(order.status().equals(OrderStatus.REJECTED));
                             assertThat(order.quantity()).isEqualTo(command.quantity());
                             assertThat(order.book().isbn().equals(isbn));
+                            assertThat(order.audit().createdBy()).isEqualTo(createdBy);
                         })
                 .verifyComplete();
 

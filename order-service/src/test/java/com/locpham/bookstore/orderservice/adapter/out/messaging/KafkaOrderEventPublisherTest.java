@@ -18,7 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @Import({TestChannelBinderConfiguration.class, TestcontainersConfiguration.class})
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 public class KafkaOrderEventPublisherTest {
     @MockitoBean private ReactiveJwtDecoder reactiveJwtDecoder;
 

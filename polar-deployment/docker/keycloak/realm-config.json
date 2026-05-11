@@ -1,9 +1,11 @@
 {
   "realm": "PolarBookshop",
   "enabled": true,
-  "accessTokenLifespan": 300,
-  "ssoSessionIdleTimeout": 1800,
-  "ssoSessionMaxLifespan": 36000,
+  "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 604800,
+  "ssoSessionMaxLifespan": 604800,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
   "roles": {
     "realm": [
       {
@@ -20,19 +22,38 @@
     {
       "clientId": "edge-service",
       "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "polar-keycloak-secret",
-      "directAccessGrantsEnabled": true,
+      "clientAuthenticatorType": "none",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
       "redirectUris": [
-        "http://localhost:9000/login/oauth2/code/*",
-        "http://localhost:9000"
+        "http://localhost:9000/login/oauth2/code/keycloak"
       ],
       "webOrigins": [
         "http://localhost:9000"
       ],
-      "publicClient": false,
+      "publicClient": true,
       "protocol": "openid-connect",
-      "fullScopeAllowed": true
+      "fullScopeAllowed": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:9000"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-roles-to-roles-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -46,12 +67,12 @@
       "credentials": [
         {
           "type": "password",
-          "value": "password",
+          "value": "bjorn",
           "temporary": false
         }
       ],
       "requiredActions": [],
-      "realmRoles": [ "customer" ]
+      "realmRoles": [ "employee" ]
     },
     {
       "username": "isabelle",
@@ -63,12 +84,12 @@
       "credentials": [
         {
           "type": "password",
-          "value": "password",
+          "value": "isabelle",
           "temporary": false
         }
       ],
       "requiredActions": [],
-      "realmRoles": [ "customer", "employee" ]
+      "realmRoles": [ "customer" ]
     }
   ]
 }

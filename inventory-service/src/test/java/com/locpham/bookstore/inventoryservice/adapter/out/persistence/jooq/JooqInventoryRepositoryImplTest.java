@@ -9,16 +9,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = {"spring.cloud.config.enabled=false", "spring.cloud.stream.enabled=false"})
 @Import(TestcontainersConfiguration.class)
 @Testcontainers
 class JooqInventoryRepositoryImplTest {
 
     @Autowired private JooqInventoryRepositoryImpl inventoryRepository;
+
+    @MockitoBean private ReactiveJwtDecoder jwtDecoder;
 
     @Test
     void saveAndFindByIsbn() {

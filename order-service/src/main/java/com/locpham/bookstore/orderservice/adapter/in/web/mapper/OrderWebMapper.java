@@ -5,8 +5,8 @@ import com.locpham.bookstore.orderservice.application.command.SubmitOrderCommand
 import com.locpham.bookstore.orderservice.application.query.GetOrdersQuery;
 
 public class OrderWebMapper {
-    public static SubmitOrderCommand toCommand(OrderRequest request) {
-        return new SubmitOrderCommand(request.isbn(), request.quantity());
+    public static SubmitOrderCommand toCommand(OrderRequest request, String userId) {
+        return new SubmitOrderCommand(request.isbn(), request.quantity(), userId);
     }
 
     public static GetOrdersQuery toQuery(String userId) {

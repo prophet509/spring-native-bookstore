@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public final class KeycloakJwtAuthoritiesConverter
         implements Converter<Jwt, Collection<GrantedAuthority>> {
 
+    private static final String DIRECT_ROLES_CLAIM = "roles";
     private static final String REALM_ACCESS_CLAIM = "realm_access";
     private static final String RESOURCE_ACCESS_CLAIM = "resource_access";
     private static final String ROLES_CLAIM = "roles";
@@ -34,10 +35,17 @@ public final class KeycloakJwtAuthoritiesConverter
 
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
-        return Stream.concat(realmRoles(jwt).stream(), clientRoles(jwt).stream())
+        return Stream.concat(
+                        directRoles(jwt).stream(),
+                        Stream.concat(realmRoles(jwt).stream(), clientRoles(jwt).stream()))
                 .distinct()
                 .map(role -> new SimpleGrantedAuthority(AUTHORITY_PREFIX + role))
                 .collect(Collectors.toUnmodifiableList());
+    }
+
+    private Collection<String> directRoles(Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList(DIRECT_ROLES_CLAIM);
+        return roles == null ? Collections.emptyList() : roles;
     }
 
     private Collection<String> realmRoles(Jwt jwt) {

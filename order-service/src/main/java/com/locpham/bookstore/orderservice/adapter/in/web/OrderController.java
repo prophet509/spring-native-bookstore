@@ -31,7 +31,9 @@ public class OrderController {
     }
 
     @PostMapping
-    public Mono<Order> submitOrder(@RequestBody @Valid OrderRequest orderRequest) {
-        return submitOrderUseCase.submitOrder(OrderWebMapper.toCommand(orderRequest));
+    public Mono<Order> submitOrder(
+            @RequestBody @Valid OrderRequest orderRequest, @AuthenticationPrincipal Jwt jwt) {
+        return submitOrderUseCase.submitOrder(
+                OrderWebMapper.toCommand(orderRequest, jwt.getSubject()));
     }
 }

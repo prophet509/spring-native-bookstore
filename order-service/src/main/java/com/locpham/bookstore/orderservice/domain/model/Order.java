@@ -27,32 +27,47 @@ public record Order(
     }
 
     public static Order createPending(String isbn, String title, double price, int quantity) {
+        return createPending(isbn, title, price, quantity, null);
+    }
+
+    public static Order createPending(
+            String isbn, String title, double price, int quantity, String createdBy) {
         return new Order(
                 null,
                 new BookInfo(isbn, title, price),
                 quantity,
                 OrderStatus.PENDING,
-                AuditMetadata.init(),
+                AuditMetadata.init(createdBy),
                 0);
     }
 
     public static Order createAccepted(String isbn, String title, double price, int quantity) {
+        return createAccepted(isbn, title, price, quantity, null);
+    }
+
+    public static Order createAccepted(
+            String isbn, String title, double price, int quantity, String createdBy) {
         return new Order(
                 null,
                 new BookInfo(isbn, title, price),
                 quantity,
                 OrderStatus.ACCEPTED,
-                AuditMetadata.init(),
+                AuditMetadata.init(createdBy),
                 0);
     }
 
     public static Order createRejected(String isbn, String title, double price, int quantity) {
+        return createRejected(isbn, title, price, quantity, null);
+    }
+
+    public static Order createRejected(
+            String isbn, String title, double price, int quantity, String createdBy) {
         return new Order(
                 null,
                 new BookInfo(isbn, title, price),
                 quantity,
                 OrderStatus.REJECTED,
-                AuditMetadata.init(),
+                AuditMetadata.init(createdBy),
                 0);
     }
 

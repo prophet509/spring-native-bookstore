@@ -26,6 +26,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -39,6 +41,8 @@ class OrderEventConsumerTest {
     @Autowired private OutputDestination output;
     @Autowired private JooqInventoryRepositoryImpl inventoryRepository;
     @Autowired private JooqReservationRepositoryImpl reservationRepository;
+
+    @MockitoBean private ReactiveJwtDecoder jwtDecoder;
 
     private ObjectMapper objectMapper;
 
@@ -69,18 +73,19 @@ class OrderEventConsumerTest {
 
     @Test
     void orderCreated_shouldReserveAndPublishDecision() throws Exception {
-        inventoryRepository.save(InventoryItem.create("ABC", 10)).block();
+        var isbn = "ABC-" + UUID.randomUUID();
+        inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
         var orderId = UUID.randomUUID();
         var message =
                 new OrderCreatedMessage(
-                        orderId, List.of(new OrderCreatedMessage.OrderItem("ABC", 2)));
+                        orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
 
         input.send(
                 MessageBuilder.withPayload(objectMapper.writeValueAsBytes(message))
                         .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .build(),
-                "order-events");
+                "reserveStock-in-0");
 
         var out = output.receive(5000, "inventory-events");
         assertThat(out).isNotNull();
@@ -90,7 +95,7 @@ class OrderEventConsumerTest {
         assertThat(decisionMessage.orderId()).isEqualTo(orderId);
         assertThat(decisionMessage.status()).isEqualTo("RESERVED");
 
-        StepVerifier.create(inventoryRepository.findByIsbn("ABC"))
+        StepVerifier.create(inventoryRepository.findByIsbn(isbn))
                 .assertNext(
                         updated -> {
                             assertThat(updated.availableQuantity()).isEqualTo(8);
@@ -113,7 +118,7 @@ class OrderEventConsumerTest {
                         .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .build();
 
-        input.send(payload, "order-events");
+        input.send(payload, "reserveStock-in-0");
         var first = output.receive(5000, "inventory-events");
         assertThat(first).isNotNull();
         drainOutput("inventory-events");
@@ -131,7 +136,7 @@ class OrderEventConsumerTest {
                         })
                 .verifyComplete();
 
-        input.send(payload, "order-events");
+        input.send(payload, "reserveStock-in-0");
 
         // Duplicate events must be idempotent at the state level (inventory must not decrement
         // twice). Re-publishing the same decision event is acceptable depending on retries.
@@ -155,22 +160,23 @@ class OrderEventConsumerTest {
 
     @Test
     void orderCancelled_shouldReleaseStockAndUpdateReservationStatus() throws Exception {
-        inventoryRepository.save(InventoryItem.create("ABC", 10)).block();
+        var isbn = "ABC-" + UUID.randomUUID();
+        inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
         var orderId = UUID.randomUUID();
 
         // Act: Send order-created event
         var createMessage =
                 new OrderCreatedMessage(
-                        orderId, List.of(new OrderCreatedMessage.OrderItem("ABC", 2)));
+                        orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
         input.send(
                 MessageBuilder.withPayload(objectMapper.writeValueAsBytes(createMessage))
                         .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .build(),
-                "order-events");
+                "reserveStock-in-0");
 
         // Verify stock đã được reserve
-        StepVerifier.create(awaitStock("ABC", 8, 2))
+        StepVerifier.create(awaitStock(isbn, 8, 2))
                 .assertNext(
                         updated -> {
                             assertThat(updated.availableQuantity()).isEqualTo(8);
@@ -186,10 +192,10 @@ class OrderEventConsumerTest {
                 MessageBuilder.withPayload(objectMapper.writeValueAsBytes(cancelMessage))
                         .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .build(),
-                "order-events");
+                "releaseStock-in-0");
 
         // Assert wait for invetory release
-        StepVerifier.create(awaitStock("ABC", 10, 0))
+        StepVerifier.create(awaitStock(isbn, 10, 0))
                 .assertNext(
                         updated -> {
                             assertThat(updated.availableQuantity()).isEqualTo(10);

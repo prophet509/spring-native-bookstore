@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
@@ -21,9 +22,7 @@ import reactor.core.publisher.Mono;
             "spring.flyway.enabled=false",
             "spring.r2dbc.enabled=false",
             "spring.cloud.config.enabled=false",
-            "spring.cloud.stream.bindings.reserveStock-in-0.destination=test",
-            "spring.cloud.stream.bindings.releaseStock-in-0.destination=test",
-            "spring.cloud.stream.bindings.inventoryDecision-out-0.destination=test"
+            "spring.cloud.stream.enabled=false"
         })
 class InventoryControllerTest {
 
@@ -32,6 +31,8 @@ class InventoryControllerTest {
     private WebTestClient webTestClient;
 
     @MockitoBean private ManageStockUseCase manageStockUseCase;
+
+    @MockitoBean private ReactiveJwtDecoder jwtDecoder;
 
     @BeforeEach
     void setUp() {

@@ -1,4 +1,4 @@
-package com.locpham.bookstore.orderservice.bootstrap.config;
+package com.locpham.bookstore.searchservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,10 +22,8 @@ public class SecurityConfig {
                         exchange ->
                                 exchange.pathMatchers("/actuator/**")
                                         .permitAll()
-                                        .pathMatchers(HttpMethod.GET, "/orders/**")
-                                        .authenticated()
-                                        .pathMatchers(HttpMethod.POST, "/orders/**")
-                                        .hasAnyRole("customer", "employee")
+                                        .pathMatchers(HttpMethod.GET, "/search/**")
+                                        .permitAll()
                                         .anyExchange()
                                         .authenticated())
                 .oauth2ResourceServer(

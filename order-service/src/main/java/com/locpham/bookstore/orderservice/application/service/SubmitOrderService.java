@@ -32,8 +32,11 @@ public class SubmitOrderService implements SubmitOrderUseCase {
     public Mono<Order> submitOrder(SubmitOrderCommand command) {
         return catalogBookPort
                 .loadBook(command.isbn())
-                .map(book -> buildPendingOrder(book, command.quantity()))
-                .switchIfEmpty(Mono.just(buildRejectedOrder(command.isbn(), command.quantity())))
+                .map(book -> buildPendingOrder(book, command.quantity(), command.createdBy()))
+                .switchIfEmpty(
+                        Mono.just(
+                                buildRejectedOrder(
+                                        command.isbn(), command.quantity(), command.createdBy())))
                 .flatMap(orderCommandPort::save)
                 .doOnNext(
                         order -> {
@@ -43,11 +46,11 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                         });
     }
 
-    private Order buildRejectedOrder(String isbn, int quantity) {
-        return Order.createRejected(isbn, null, 0.0, quantity);
+    private Order buildRejectedOrder(String isbn, int quantity, String createdBy) {
+        return Order.createRejected(isbn, null, 0.0, quantity, createdBy);
     }
 
-    private Order buildPendingOrder(BookSnapshot book, int quantity) {
-        return Order.createPending(book.isbn(), book.title(), book.price(), quantity);
+    private Order buildPendingOrder(BookSnapshot book, int quantity, String createdBy) {
+        return Order.createPending(book.isbn(), book.title(), book.price(), quantity, createdBy);
     }
 }

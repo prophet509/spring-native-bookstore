@@ -17,7 +17,13 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@WebFluxTest(SearchController.class)
+@WebFluxTest(
+        value = SearchController.class,
+        properties = {
+            "spring.cloud.config.enabled=false",
+            "spring.cloud.config.fail-fast=false",
+            "spring.security.oauth2.resourceserver.jwt.issuer-uri=http://localhost/test"
+        })
 class SearchControllerTests {
 
     @Autowired private WebTestClient webClient;

@@ -11,6 +11,7 @@ import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -51,6 +52,7 @@ public class BookController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('employee')")
     public BookResponse post(@Valid @RequestBody BookRequest request) {
         var book = addBookUseCase.addBookToCatalog(request.toDomain());
         return BookResponse.fromDomain(book);
@@ -58,11 +60,13 @@ public class BookController {
 
     @DeleteMapping("{isbn}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('employee')")
     public void delete(@PathVariable String isbn) {
         editBookUseCase.deleteBook(isbn);
     }
 
     @PutMapping("{isbn}")
+    @PreAuthorize("hasRole('employee')")
     public BookResponse put(@PathVariable String isbn, @Valid @RequestBody BookRequest request) {
         var book = editBookUseCase.editBookDetails(request.toDomain());
         return BookResponse.fromDomain(book);

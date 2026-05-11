@@ -13,7 +13,7 @@ spring:
       timeout: 500ms
   session:
     store-type: redis
-    timeout: 10m
+    timeout: 7d
     redis:
       namespace: polar:edge
   security:
@@ -22,7 +22,7 @@ spring:
         registration:
           keycloak:
             client-id: edge-service
-            client-secret: polar-keycloak-secret
+            authorization-grant-type: authorization_code
             scope: openid,roles
         provider:
           keycloak:
@@ -53,6 +53,7 @@ spring:
                 redis-rate-limiter.replenishRate: 10
                 redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
           routes:
             - id: spa-route
               uri: ${SPA_URL:http://localhost:9004}

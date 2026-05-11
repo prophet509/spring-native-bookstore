@@ -1,11 +1,17 @@
 package com.locpham.bookstore.edgeservice.security;
 
-// @Configuration
-// public class RateLimiterConfig {
-//    @Bean
-//    KeyResolver keyResolver() {
-//        return exchange -> exchange.getPrincipal()
-//                .flatMap(p -> Mono.just(p.getName()))
-//                .defaultIfEmpty("ANONYMOUS");
-//    }
-// }
+import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RateLimiterConfig {
+
+    @Bean
+    KeyResolver userKeyResolver() {
+        return exchange ->
+                exchange.getPrincipal()
+                        .map(principal -> principal.getName())
+                        .defaultIfEmpty("anonymous");
+    }
+}

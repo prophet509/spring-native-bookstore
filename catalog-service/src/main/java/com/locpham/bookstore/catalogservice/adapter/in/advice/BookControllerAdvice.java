@@ -1,10 +1,11 @@
-package com.locpham.bookstore.catalogservice.adapter.in;
+package com.locpham.bookstore.catalogservice.adapter.in.advice;
 
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookAlreadyExistsException;
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,7 +29,7 @@ public class BookControllerAdvice {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult()
                 .getAllErrors()
@@ -37,6 +38,8 @@ public class BookControllerAdvice {
                                 errors.put(
                                         ((FieldError) error).getField(),
                                         error.getDefaultMessage()));
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.);
         return errors;
     }
 }

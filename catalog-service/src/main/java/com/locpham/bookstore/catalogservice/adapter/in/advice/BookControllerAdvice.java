@@ -1,5 +1,7 @@
 package com.locpham.bookstore.catalogservice.adapter.in.advice;
 
+import static com.locpham.bookstore.catalogservice.domain.book.exception.ErrorType.VALIDATION_FAILED;
+
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookAlreadyExistsException;
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookNotFoundException;
 import java.util.HashMap;
@@ -22,7 +24,7 @@ public class BookControllerAdvice {
     }
 
     @ExceptionHandler(BookAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ResponseStatus(HttpStatus.CONFLICT)
     String bookAlreadyHandler(BookAlreadyExistsException ex) {
         return ex.getMessage();
     }
@@ -39,7 +41,12 @@ public class BookControllerAdvice {
                                         ((FieldError) error).getField(),
                                         error.getDefaultMessage()));
 
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.);
-        return errors;
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+
+        problemDetail.setInstance(VALIDATION_FAILED.getType());
+        problemDetail.setDetail(VALIDATION_FAILED.getTitle());
+        problemDetail.setProperty("errors", errors);
+
+        return problemDetail;
     }
 }

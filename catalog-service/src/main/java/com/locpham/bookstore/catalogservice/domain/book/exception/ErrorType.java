@@ -4,8 +4,10 @@ import java.net.URI;
 
 public enum ErrorType {
     BOOK_NOT_FOUND(URI.create("https://bookstore.api/errors/book-not-found"), "Book not found"),
-    BOOK_ALREADY_EXISTS(URI.create("https://bookstore.api/errors/book-already-exists"), "Book already exists"),
-    VALIDATION_FAILED(URI.create("https://bookstore.api/errors/validation-failed"), "Validation failed");
+    BOOK_ALREADY_EXISTS(
+            URI.create("https://bookstore.api/errors/book-already-exists"), "Book already exists"),
+    VALIDATION_FAILED(
+            URI.create("https://bookstore.api/errors/validation-failed"), "Validation failed");
 
     private final URI type;
     private final String title;

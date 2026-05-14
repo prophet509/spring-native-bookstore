@@ -1,5 +1,7 @@
 package com.locpham.bookstore.orderservice.domain.model;
 
+import com.locpham.bookstore.orderservice.domain.exception.IllegalOrderException;
+
 public record Order(
         Long id,
         BookInfo book,
@@ -10,19 +12,19 @@ public record Order(
 
     public Order {
         if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be positive");
+            throw new IllegalOrderException("Quantity must be positive");
         }
         if (book == null) {
-            throw new IllegalArgumentException("Book must not be null");
+            throw new IllegalOrderException("Book must not be null");
         }
         if (status == null) {
-            throw new IllegalArgumentException("Status must not be null");
+            throw new IllegalOrderException("Status must not be null");
         }
         if (audit == null) {
-            throw new IllegalArgumentException("Audit must not be null");
+            throw new IllegalOrderException("Audit must not be null");
         }
         if (version < 0) {
-            throw new IllegalArgumentException("Version must be non-negative");
+            throw new IllegalOrderException("Version must be non-negative");
         }
     }
 
@@ -73,21 +75,21 @@ public record Order(
 
     public Order accept() {
         if (status != OrderStatus.PENDING) {
-            throw new IllegalStateException("Order must be PENDING to accept");
+            throw new IllegalOrderException("Order must be PENDING to accept");
         }
         return new Order(id, book, quantity, OrderStatus.ACCEPTED, audit.update(), version + 1);
     }
 
     public Order reject() {
         if (status != OrderStatus.PENDING) {
-            throw new IllegalStateException("Order must be PENDING to reject");
+            throw new IllegalOrderException("Order must be PENDING to reject");
         }
         return new Order(id, book, quantity, OrderStatus.REJECTED, audit.update(), version + 1);
     }
 
     public Order markDispatched() {
         if (status != OrderStatus.ACCEPTED) {
-            throw new IllegalStateException("Order must be ACCEPTED to mark as dispatched");
+            throw new IllegalOrderException("Order must be ACCEPTED to mark as dispatched");
         }
         return new Order(id, book, quantity, OrderStatus.DISPATCHED, audit.update(), version + 1);
     }

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.locpham.bookstore.orderservice.application.command.MarkOrderDispatchedCommand;
 import com.locpham.bookstore.orderservice.application.port.out.OrderCommandPort;
 import com.locpham.bookstore.orderservice.application.port.out.OrderQueryPort;
+import com.locpham.bookstore.orderservice.domain.exception.IllegalOrderException;
 import com.locpham.bookstore.orderservice.domain.model.Order;
 import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import org.junit.jupiter.api.Nested;
@@ -82,7 +83,7 @@ public class MarkOrderDispatchedServiceTest {
             StepVerifier.create(markOrderDispatchedService.markOrderDispatched(command))
                     .expectErrorMatches(
                             throwable ->
-                                    throwable instanceof IllegalStateException
+                                    throwable instanceof IllegalOrderException
                                             && throwable
                                                     .getMessage()
                                                     .equals(
@@ -100,7 +101,7 @@ public class MarkOrderDispatchedServiceTest {
             StepVerifier.create(markOrderDispatchedService.markOrderDispatched(command))
                     .expectErrorMatches(
                             throwable ->
-                                    throwable instanceof IllegalStateException
+                                    throwable instanceof IllegalOrderException
                                             && throwable
                                                     .getMessage()
                                                     .equals(
@@ -119,7 +120,7 @@ public class MarkOrderDispatchedServiceTest {
             StepVerifier.create(markOrderDispatchedService.markOrderDispatched(command))
                     .expectErrorMatches(
                             throwable ->
-                                    throwable instanceof IllegalStateException
+                                    throwable instanceof IllegalOrderException
                                             && throwable
                                                     .getMessage()
                                                     .equals(

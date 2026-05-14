@@ -2,6 +2,7 @@ package com.locpham.bookstore.orderservice.adapter.out.catalog;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.locpham.bookstore.orderservice.domain.exception.BookNotFoundException;
 import java.io.IOException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -52,13 +53,16 @@ class CatalogWebClientAdapterTest {
     void loadBookNotFound() {
         var mockResponse =
                 new MockResponse()
+                        .setResponseCode(404)
                         .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .setBody("");
 
         mockWebServer.enqueue(mockResponse);
 
-        var bookOld = catalogWebClientAdapter.loadBook("1234567890").block();
-        assertNull(bookOld);
+        var exception = assertThrows(
+                BookNotFoundException.class,
+                () -> catalogWebClientAdapter.loadBook("1234567890").block());
+        assertEquals("Book with ISBN '1234567890' not found in catalog", exception.getMessage());
     }
 
     @Test
@@ -71,7 +75,9 @@ class CatalogWebClientAdapterTest {
 
         mockWebServer.enqueue(mockResponse);
 
-        var bookOld = catalogWebClientAdapter.loadBook("1234567890").block();
-        assertNull(bookOld);
+        var exception = assertThrows(
+                BookNotFoundException.class,
+                () -> catalogWebClientAdapter.loadBook("1234567890").block());
+        assertEquals("Book with ISBN '1234567890' not found in catalog", exception.getMessage());
     }
 }

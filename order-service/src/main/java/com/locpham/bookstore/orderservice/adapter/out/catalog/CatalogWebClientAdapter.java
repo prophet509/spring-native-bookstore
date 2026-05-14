@@ -1,6 +1,7 @@
 package com.locpham.bookstore.orderservice.adapter.out.catalog;
 
 import com.locpham.bookstore.orderservice.application.port.out.CatalogBookPort;
+import com.locpham.bookstore.orderservice.domain.exception.BookNotFoundException;
 import com.locpham.bookstore.orderservice.domain.model.BookSnapshot;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,7 @@ public class CatalogWebClientAdapter implements CatalogBookPort {
                 .retrieve()
                 .bodyToMono(BookDto.class)
                 .map(this::toBookSnapshot)
-                .onErrorResume(e -> Mono.empty());
+                .onErrorResume(e -> Mono.error(new BookNotFoundException(isbn)));
     }
 
     private BookSnapshot toBookSnapshot(BookDto dto) {

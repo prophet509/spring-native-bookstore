@@ -2,6 +2,7 @@ package com.locpham.bookstore.orderservice.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.locpham.bookstore.orderservice.domain.exception.IllegalOrderException;
 import org.junit.jupiter.api.Test;
 
 class OrderTest {
@@ -20,7 +21,7 @@ class OrderTest {
     void accept_shouldThrowException_whenOrderNotPending() {
         var acceptedOrder = Order.createAccepted("1234567890", "Test Book", 9.99, 2);
 
-        var exception = assertThrows(IllegalStateException.class, acceptedOrder::accept);
+        var exception = assertThrows(IllegalOrderException.class, acceptedOrder::accept);
         assertEquals("Order must be PENDING to accept", exception.getMessage());
     }
 
@@ -48,7 +49,7 @@ class OrderTest {
     void markDispatched_shouldThrowException_whenOrderNotAccepted() {
         var order = Order.createPending("1234567890", "Test Book", 9.99, 2);
 
-        var exception = assertThrows(IllegalStateException.class, order::markDispatched);
+        var exception = assertThrows(IllegalOrderException.class, order::markDispatched);
         assertEquals("Order must be ACCEPTED to mark as dispatched", exception.getMessage());
     }
 
@@ -56,7 +57,7 @@ class OrderTest {
     void reject_shouldThrowException_whenOrderNotPending() {
         var order = Order.createAccepted("1234567890", "Test Book", 9.99, 2);
 
-        var exception = assertThrows(IllegalStateException.class, order::reject);
+        var exception = assertThrows(IllegalOrderException.class, order::reject);
         assertEquals("Order must be PENDING to reject", exception.getMessage());
     }
 
@@ -64,7 +65,7 @@ class OrderTest {
     void shouldThrowException_whenQuantityZero() {
         var exception =
                 assertThrows(
-                        IllegalArgumentException.class,
+                        IllegalOrderException.class,
                         () -> Order.createPending("1234567890", "Test Book", 9.99, 0));
         assertEquals("Quantity must be positive", exception.getMessage());
     }
@@ -73,7 +74,7 @@ class OrderTest {
     void shouldThrowException_whenQuantityNegative() {
         var exception =
                 assertThrows(
-                        IllegalArgumentException.class,
+                        IllegalOrderException.class,
                         () -> Order.createPending("1234567890", "Test Book", 9.99, -1));
         assertEquals("Quantity must be positive", exception.getMessage());
     }
@@ -82,7 +83,7 @@ class OrderTest {
     void shouldThrowException_whenBookNull() {
         var exception =
                 assertThrows(
-                        IllegalArgumentException.class,
+                        IllegalOrderException.class,
                         () ->
                                 new Order(
                                         null,
@@ -98,7 +99,7 @@ class OrderTest {
     void shouldThrowException_whenStatusNull() {
         var exception =
                 assertThrows(
-                        IllegalArgumentException.class,
+                        IllegalOrderException.class,
                         () ->
                                 new Order(
                                         null,
@@ -114,7 +115,7 @@ class OrderTest {
     void shouldThrowException_whenAuditNull() {
         var exception =
                 assertThrows(
-                        IllegalArgumentException.class,
+                        IllegalOrderException.class,
                         () ->
                                 new Order(
                                         null,
@@ -130,7 +131,7 @@ class OrderTest {
     void shouldThrowException_whenVersionNegative() {
         var exception =
                 assertThrows(
-                        IllegalArgumentException.class,
+                        IllegalOrderException.class,
                         () ->
                                 new Order(
                                         null,

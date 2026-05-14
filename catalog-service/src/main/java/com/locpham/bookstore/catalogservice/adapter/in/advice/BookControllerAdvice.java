@@ -1,37 +1,44 @@
 package com.locpham.bookstore.catalogservice.adapter.in.advice;
 
-import static com.locpham.bookstore.catalogservice.domain.book.exception.ErrorType.VALIDATION_FAILED;
-
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookAlreadyExistsException;
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookNotFoundException;
+import java.net.URI;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class BookControllerAdvice {
 
     @ExceptionHandler(BookNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    String bookNotFoundHandler(BookNotFoundException ex) {
-        return ex.getMessage();
+    ResponseEntity<ProblemDetail> bookNotFoundHandler(BookNotFoundException ex) {
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setType(URI.create("https://bookstore.api/errors/book-not-found"));
+        problemDetail.setTitle("Book Not Found");
+        problemDetail.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problemDetail);
     }
 
     @ExceptionHandler(BookAlreadyExistsException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    String bookAlreadyHandler(BookAlreadyExistsException ex) {
-        return ex.getMessage();
+    ResponseEntity<ProblemDetail> bookAlreadyHandler(BookAlreadyExistsException ex) {
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setType(URI.create("https://bookstore.api/errors/book-already-exists"));
+        problemDetail.setTitle("Book Already Exists");
+        problemDetail.setProperty("timestamp", Instant.now());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problemDetail);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
+    ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult()
                 .getAllErrors()
@@ -41,12 +48,13 @@ public class BookControllerAdvice {
                                         ((FieldError) error).getField(),
                                         error.getDefaultMessage()));
 
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-
-        problemDetail.setInstance(VALIDATION_FAILED.getType());
-        problemDetail.setDetail(VALIDATION_FAILED.getTitle());
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        problemDetail.setType(URI.create("https://bookstore.api/errors/validation-failure"));
+        problemDetail.setTitle("Validation Failed");
         problemDetail.setProperty("errors", errors);
+        problemDetail.setProperty("timestamp", Instant.now());
 
-        return problemDetail;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 }

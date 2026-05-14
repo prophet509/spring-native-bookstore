@@ -53,7 +53,13 @@ public class BookControllerMvcTests {
         String isbn = "1234567890";
         given(viewBookDetailUseCase.viewBookDetail(isbn))
                 .willThrow(new BookNotFoundException(isbn));
-        mockMvc.perform(get("/books/" + isbn)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/books/" + isbn))
+                .andExpect(status().isNotFound())
+                .andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                                .contentType("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://bookstore.api/errors/book-not-found"))
+                .andExpect(jsonPath("$.title").value("Book Not Found"));
     }
 
     @Test
@@ -123,7 +129,13 @@ public class BookControllerMvcTests {
                                         jwt().authorities(
                                                         new SimpleGrantedAuthority(
                                                                 "ROLE_employee"))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                                .contentType("application/problem+json"))
+                .andExpect(
+                        jsonPath("$.type")
+                                .value("https://bookstore.api/errors/book-already-exists"));
     }
 
     @Test
@@ -141,7 +153,73 @@ public class BookControllerMvcTests {
                                         jwt().authorities(
                                                         new SimpleGrantedAuthority(
                                                                 "ROLE_employee"))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                                .contentType("application/problem+json"))
+                .andExpect(
+                        jsonPath("$.type").value("https://bookstore.api/errors/validation-failed"));
+    }
+
+    @Test
+    void whenPostInvalidBodyThenShouldReturn400() throws Exception {
+        var payload =
+                """
+                    {"isbn":"1234567890", "price": "invalid"}
+                """;
+
+        mockMvc.perform(
+                        post("/books")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload)
+                                .with(
+                                        jwt().authorities(
+                                                        new SimpleGrantedAuthority(
+                                                                "ROLE_employee"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(
+                        org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                                .contentType("application/problem+json"))
+                .andExpect(
+                        jsonPath("$.type").value("https://bookstore.api/errors/malformed-request"));
+    }
+
+    @Test
+    void whenPostMissingTitleThenShouldReturn400() throws Exception {
+        var payload =
+                """
+                    {"isbn":"1234567890","author":"Author","price":10.0,"publisher":"Polarsophia"}
+                """;
+
+        mockMvc.perform(
+                        post("/books")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload)
+                                .with(
+                                        jwt().authorities(
+                                                        new SimpleGrantedAuthority(
+                                                                "ROLE_employee"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.title").exists());
+    }
+
+    @Test
+    void whenPostNegativePriceThenShouldReturn400() throws Exception {
+        var payload =
+                """
+                    {"isbn":"1234567890","title":"Title","author":"Author","price":-10.0,"publisher":"Polarsophia"}
+                """;
+
+        mockMvc.perform(
+                        post("/books")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload)
+                                .with(
+                                        jwt().authorities(
+                                                        new SimpleGrantedAuthority(
+                                                                "ROLE_employee"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.price").exists());
     }
 
     @Test

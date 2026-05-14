@@ -59,9 +59,10 @@ class CatalogWebClientAdapterTest {
 
         mockWebServer.enqueue(mockResponse);
 
-        var exception = assertThrows(
-                BookNotFoundException.class,
-                () -> catalogWebClientAdapter.loadBook("1234567890").block());
+        var exception =
+                assertThrows(
+                        BookNotFoundException.class,
+                        () -> catalogWebClientAdapter.loadBook("1234567890").block());
         assertEquals("Book with ISBN '1234567890' not found in catalog", exception.getMessage());
     }
 
@@ -75,9 +76,10 @@ class CatalogWebClientAdapterTest {
 
         mockWebServer.enqueue(mockResponse);
 
-        var exception = assertThrows(
-                BookNotFoundException.class,
-                () -> catalogWebClientAdapter.loadBook("1234567890").block());
+        var exception =
+                assertThrows(
+                        BookNotFoundException.class,
+                        () -> catalogWebClientAdapter.loadBook("1234567890").block());
         assertEquals("Book with ISBN '1234567890' not found in catalog", exception.getMessage());
     }
 }

@@ -20,7 +20,7 @@ repositories {
 }
 
 ext {
-    set('otelAgentVersion', '1.33.3')
+    set('otelAgentVersion', '2.12.0')
     set('springCloudVersion', "2025.1.0")
     set('testcontainersVersion', "1.19.7")
 }

@@ -62,7 +62,8 @@ public class SubmitOrderServiceTest {
         var createdBy = "isabelle";
         var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
-        given(catalogBookPort.loadBook(isbn)).willReturn(Mono.error(new BookNotFoundException(isbn)));
+        given(catalogBookPort.loadBook(isbn))
+                .willReturn(Mono.error(new BookNotFoundException(isbn)));
 
         StepVerifier.create(submitOrderService.submitOrder(command))
                 .expectError(BookNotFoundException.class)

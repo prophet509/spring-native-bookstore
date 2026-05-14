@@ -20,6 +20,7 @@ repositories {
 }
 
 ext {
+    set('otelAgentVersion', '2.12.0')
     set('springCloudVersion', "2025.1.1")
     set('testcontainersVersion', "1.21.4")
 }
@@ -35,6 +36,9 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-stream'
     implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka'   // ← reactive bindings
+
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+    runtimeOnly "io.opentelemetry.javaagent:opentelemetry-javaagent:${otelAgentVersion}"
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 

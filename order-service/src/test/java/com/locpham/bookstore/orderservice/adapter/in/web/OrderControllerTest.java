@@ -114,6 +114,57 @@ class OrderControllerTest {
                 .bodyValue(invalidOrderRequest)
                 .exchange()
                 .expectStatus()
-                .isBadRequest();
+                .isBadRequest()
+                .expectHeader()
+                .contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("https://bookstore.api/errors/validation-failed")
+                .jsonPath("$.title")
+                .isEqualTo("Validation Failed");
+    }
+
+    @Test
+    void testSubmitOrderWhenNegativeQuantityThenReturnBadRequest() {
+        OrderRequest invalidOrderRequest = new OrderRequest("1234567890", -1); // Negative quantity
+
+        webTestClient
+                .mutateWith(
+                        mockJwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_customer"))
+                                .jwt(builder -> builder.subject("user-test")))
+                .post()
+                .uri("/orders")
+                .bodyValue(invalidOrderRequest)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectHeader()
+                .contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("https://bookstore.api/errors/validation-failed");
+    }
+
+    @Test
+    void testSubmitOrderWhenBlankIsbnThenReturnBadRequest() {
+        OrderRequest invalidOrderRequest = new OrderRequest("   ", 2); // Blank ISBN
+
+        webTestClient
+                .mutateWith(
+                        mockJwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_customer"))
+                                .jwt(builder -> builder.subject("user-test")))
+                .post()
+                .uri("/orders")
+                .bodyValue(invalidOrderRequest)
+                .exchange()
+                .expectStatus()
+                .isBadRequest()
+                .expectHeader()
+                .contentType("application/problem+json")
+                .expectBody()
+                .jsonPath("$.type")
+                .isEqualTo("https://bookstore.api/errors/validation-failed");
     }
 }

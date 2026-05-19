@@ -1,0 +1,19 @@
+meta {
+  name: User Info
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo
+  body: none
+  auth: bearer
+}
+
+headers {
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

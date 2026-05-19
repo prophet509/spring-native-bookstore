@@ -1,0 +1,23 @@
+{
+  "servers": [
+    {
+      "id": "java",
+      "extensions": [".java"],
+      "languageIds": ["java"],
+      "command": "jls",
+      "args": [],
+      "rootPatterns": [
+        "settings.gradle",
+        "settings.gradle.kts",
+        "build.gradle",
+        "build.gradle.kts",
+        "pom.xml",
+        ".classpath"
+      ]
+    }
+  ],
+  "requestTimeout": 30000,
+  "autoStart": true,
+  "logLevel": "info",
+  "idleTimeout": 1800000
+}

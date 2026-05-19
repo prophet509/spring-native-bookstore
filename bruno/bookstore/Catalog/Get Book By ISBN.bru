@@ -1,0 +1,15 @@
+meta {
+  name: Get Book By ISBN
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{catalogUrl}}/books/{{isbn}}
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}

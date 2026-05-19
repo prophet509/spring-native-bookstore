@@ -126,3 +126,14 @@ cd order-service && ./gradlew spotlessApply spotlessCheck
 - Narrow diffs; don't clean up unrelated code while refactoring.
 - Ambiguous requirements → ask or state assumptions before broad changes.
 - Multi-step work → short plan with verify points; update as task evolves.
+
+## MCP Tooling
+
+- MCP templates live in `mcp/`.
+- Use `mcp/claude_desktop_config.json` for Claude Desktop, `mcp/windsurf_mcp_config.json` for Windsurf, and `mcp/opencode.json` for OpenCode.
+- Expected MCP servers: `gitnexus`, `java-lsp`, `java-app-modernization`, `bookstore-postgres-catalog`, `bookstore-postgres-order`, `bookstore-postgres-inventory`, `bookstore-redis`, and `bookstore-keycloak`.
+- Use `gitnexus` first for repository-wide understanding, impact analysis, callers/callees, execution flows, and safe renames.
+- Use `java-lsp` for Java symbol navigation, diagnostics, rename previews, hover/type info, code actions, and call/type hierarchy.
+- Use `java-app-modernization` for Java/Spring upgrade, migration, and modernization analysis only; keep `APPMOD_MCP_COLLECT_TELEMETRY=false`.
+- `java-lsp` reads `mcp/lsp-mcp.json` and expects `jls` on `PATH`; if unavailable, fall back to GitNexus plus Gradle verification.
+- Data/runtime MCP servers target local Docker services: Postgres catalog/order/inventory, Redis, and Keycloak.

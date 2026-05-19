@@ -1,0 +1,22 @@
+meta {
+  name: Adjust Stock
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{inventoryUrl}}/inventory/{{isbn}}/adjust
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "delta": 10
+  }
+}

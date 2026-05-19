@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "spring-native-bookstore",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

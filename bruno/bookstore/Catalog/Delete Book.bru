@@ -1,0 +1,15 @@
+meta {
+  name: Delete Book
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{catalogUrl}}/books/{{isbn}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

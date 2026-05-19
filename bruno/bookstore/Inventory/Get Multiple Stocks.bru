@@ -1,0 +1,15 @@
+meta {
+  name: Get Multiple Stocks
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{inventoryUrl}}/inventory?isbn={{isbn}}&isbn=1234567890123
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}

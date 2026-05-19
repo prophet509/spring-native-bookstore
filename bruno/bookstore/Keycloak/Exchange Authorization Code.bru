@@ -1,0 +1,33 @@
+meta {
+  name: Exchange Authorization Code
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+  body: form-urlencoded
+  auth: none
+}
+
+headers {
+  Content-Type: application/x-www-form-urlencoded
+  Accept: application/json
+}
+
+body:form-urlencoded {
+  grant_type: authorization_code
+  client_id: {{clientId}}
+  code: {{authCode}}
+  redirect_uri: {{redirectUri}}
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.access_token) {
+    bru.setEnvVar("accessToken", body.access_token);
+  }
+  if (body && body.refresh_token) {
+    bru.setEnvVar("refreshToken", body.refresh_token);
+  }
+}

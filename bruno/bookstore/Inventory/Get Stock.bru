@@ -1,0 +1,15 @@
+meta {
+  name: Get Stock
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{inventoryUrl}}/inventory/{{isbn}}
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}

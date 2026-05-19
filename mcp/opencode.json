@@ -1,0 +1,62 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "gitnexus": {
+      "type": "local",
+      "command": ["npx", "-y", "gitnexus", "mcp"]
+    },
+    "java-lsp": {
+      "type": "local",
+      "command": ["npx", "-y", "lsp-mcp-server"],
+      "environment": {
+        "LSP_CONFIG_PATH": "/Users/locpham/Desktop/Workspace/spring-native-bookstore/mcp/lsp-mcp.json",
+        "LSP_LOG_LEVEL": "info",
+        "LSP_WORKSPACE_ROOT": "/Users/locpham/Desktop/Workspace/spring-native-bookstore"
+      }
+    },
+    "java-app-modernization": {
+      "type": "local",
+      "command": ["npx", "-y", "@microsoft/github-copilot-app-modernization-mcp-server@latest"],
+      "environment": {
+        "APPMOD_MCP_COLLECT_TELEMETRY": "false"
+      }
+    },
+    "bookstore-postgres-catalog": {
+      "type": "local",
+      "command": ["uvx", "postgres-mcp", "--access-mode=restricted"],
+      "environment": {
+        "DATABASE_URI": "postgresql://user:password@localhost:5432/polardb_catalog"
+      }
+    },
+    "bookstore-postgres-order": {
+      "type": "local",
+      "command": ["uvx", "postgres-mcp", "--access-mode=restricted"],
+      "environment": {
+        "DATABASE_URI": "postgresql://user:password@localhost:5433/polardb_order"
+      }
+    },
+    "bookstore-postgres-inventory": {
+      "type": "local",
+      "command": ["uvx", "postgres-mcp", "--access-mode=restricted"],
+      "environment": {
+        "DATABASE_URI": "postgresql://user:password@localhost:5434/polardb_inventory"
+      }
+    },
+    "bookstore-redis": {
+      "type": "local",
+      "command": ["uvx", "--from", "redis-mcp-server@latest", "redis-mcp-server", "--url", "redis://localhost:6379/0"],
+      "environment": {
+        "MCP_REDIS_LOG_LEVEL": "INFO"
+      }
+    },
+    "bookstore-keycloak": {
+      "type": "local",
+      "command": ["npx", "-y", "keycloak-model-context-protocol"],
+      "environment": {
+        "KEYCLOAK_URL": "http://localhost:8080",
+        "KEYCLOAK_ADMIN": "user",
+        "KEYCLOAK_ADMIN_PASSWORD": "password"
+      }
+    }
+  }
+}

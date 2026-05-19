@@ -1,0 +1,15 @@
+meta {
+  name: Suggest Titles
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{searchUrl}}/search/suggest?q=spr
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}

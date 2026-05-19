@@ -1,0 +1,27 @@
+meta {
+  name: Submit Order
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{orderUrl}}/orders
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "isbn": "{{isbn}}",
+    "quantity": 1
+  }
+}

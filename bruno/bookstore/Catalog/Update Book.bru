@@ -1,0 +1,30 @@
+meta {
+  name: Update Book
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{catalogUrl}}/books/{{isbn}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "isbn": "{{isbn}}",
+    "title": "Spring Native Bookstore Updated",
+    "author": "Loc Pham",
+    "price": 44.99,
+    "publisher": "Polar"
+  }
+}

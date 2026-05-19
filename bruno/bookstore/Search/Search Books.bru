@@ -1,0 +1,15 @@
+meta {
+  name: Search Books
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{searchUrl}}/search?q=spring&page=0&size=10&sort=title,ASC
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+}

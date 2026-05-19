@@ -1,0 +1,30 @@
+meta {
+  name: Create Book
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{catalogUrl}}/books
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "isbn": "{{isbn}}",
+    "title": "Spring Native Bookstore",
+    "author": "Loc Pham",
+    "price": 39.99,
+    "publisher": "Polar"
+  }
+}

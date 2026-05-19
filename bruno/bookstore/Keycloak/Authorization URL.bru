@@ -1,0 +1,15 @@
+meta {
+  name: Authorization URL
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/auth?client_id={{clientId}}&redirect_uri={{redirectUri}}&response_type=code&scope=openid%20roles
+  body: none
+  auth: none
+}
+
+docs {
+  Open this request in a browser, login with bjorn/bjorn for employee access or isabelle/isabelle for customer access, then copy the code query parameter from the redirect URL into the authCode environment variable.
+}

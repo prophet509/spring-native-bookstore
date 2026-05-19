@@ -1,0 +1,5 @@
+{
+  "brokers": ["localhost:9092"],
+  "clientId": "spring-native-bookstore-mcp",
+  "ssl": false
+}

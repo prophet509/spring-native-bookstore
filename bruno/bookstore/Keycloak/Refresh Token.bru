@@ -1,0 +1,32 @@
+meta {
+  name: Refresh Token
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+  body: form-urlencoded
+  auth: none
+}
+
+headers {
+  Content-Type: application/x-www-form-urlencoded
+  Accept: application/json
+}
+
+body:form-urlencoded {
+  grant_type: refresh_token
+  client_id: {{clientId}}
+  refresh_token: {{refreshToken}}
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.access_token) {
+    bru.setEnvVar("accessToken", body.access_token);
+  }
+  if (body && body.refresh_token) {
+    bru.setEnvVar("refreshToken", body.refresh_token);
+  }
+}

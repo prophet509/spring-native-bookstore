@@ -1,0 +1,27 @@
+*** Begin Patch
+*** Update File: AGENTS.md
+@@
+ ## Git and Agent Workflow
+ - Do not revert or rewrite unrelated user changes.
+ - Avoid destructive Git commands unless explicitly requested.
+ - Before commit/PR, run relevant tests and formatting checks for touched services.
+ - In commit/PR notes, mention:
+   - touched service(s)
+   - executed checks
+   - whether Docker/Testcontainers tests were run
+ - Keep this document concise and accurate; prune outdated rules when adding new ones.
++
++## MCP Tooling
++- MCP templates live in `mcp/` for Claude Desktop, Windsurf, and OpenCode.
++- Use `mcp/claude_desktop_config.json` for Claude Desktop, `mcp/windsurf_mcp_config.json` for Windsurf, and `mcp/opencode.json` for OpenCode.
++- Required code-intelligence servers are `gitnexus`, `java-lsp`, and `java-app-modernization`.
++- Use `gitnexus` first for repository-wide understanding, impact analysis, callers/callees, execution flows, and safe renames.
++- Use `java-lsp` for Java symbol navigation, diagnostics, local refactorings, rename previews, hover/type info, and call/type hierarchy after the Java language server is available.
++- Use `java-app-modernization` only for Java/Spring upgrade, migration, and modernization analysis; keep telemetry disabled with `APPMOD_MCP_COLLECT_TELEMETRY=false`.
++- The Java LSP config is `mcp/lsp-mcp.json` and expects `jls` on `PATH`; if unavailable, fall back to GitNexus plus Gradle verification.
++- Data/runtime MCP servers are `bookstore-postgres-catalog`, `bookstore-postgres-order`, `bookstore-postgres-inventory`, `bookstore-redis`, and `bookstore-keycloak`.
++- Kafka inspection uses `mcp/.kafka-mcp.json` with `kafka-mcp`; Kafka MCP support is currently CLI-oriented rather than a full stdio MCP server in this repo.
+ 
+ <!-- gitnexus:start -->
+ # GitNexus — Code Intelligence
+*** End Patch

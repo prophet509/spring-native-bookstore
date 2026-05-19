@@ -1,3 +1,16 @@
+# Claude Project Tools
+
+## MCP Setup
+
+- MCP templates live in `mcp/`.
+- Use `mcp/claude_desktop_config.json` for Claude Desktop.
+- Expected MCP servers: `gitnexus`, `java-lsp`, `java-app-modernization`, `bookstore-postgres-catalog`, `bookstore-postgres-order`, `bookstore-postgres-inventory`, `bookstore-redis`, and `bookstore-keycloak`.
+- Use `gitnexus` before editing Java symbols for impact, context, callers/callees, execution flows, and safe renames.
+- Use `java-lsp` for precise Java symbol navigation, diagnostics, rename previews, hover/type information, code actions, and call/type hierarchy.
+- Use `java-app-modernization` for Java/Spring upgrade or migration analysis only.
+- `java-lsp` reads `mcp/lsp-mcp.json` and expects `jls` on `PATH`; if unavailable, use GitNexus and Gradle checks instead.
+- Keep `APPMOD_MCP_COLLECT_TELEMETRY=false` for the modernization MCP server.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 

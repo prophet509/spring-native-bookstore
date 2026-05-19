@@ -9,6 +9,11 @@ spring:
     timeout-per-shutdown-phase: 15s
   config:
     import: "optional:configserver:"
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/PolarBookshop
   cloud:
     config:
       uri: http://localhost:8888
@@ -28,10 +33,10 @@ spring:
       source: inventoryDecision
       bindings:
         reserveStock-in-0:
-          destination: order-events
+          destination: order-created-events
           group: ${spring.application.name}
         releaseStock-in-0:
-          destination: order-events
+          destination: order-cancelled-events
           group: ${spring.application.name}
         inventoryDecision-out-0:
           destination: inventory-events

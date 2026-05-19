@@ -58,7 +58,8 @@ class OrderEventConsumerTest {
     void setUp() {
         this.objectMapper = new ObjectMapper();
         drainOutput("inventory-events");
-        drainOutput("order-events");
+        drainOutput("order-created-events");
+        drainOutput("order-cancelled-events");
     }
 
     private void drainOutput(String bindingName) {

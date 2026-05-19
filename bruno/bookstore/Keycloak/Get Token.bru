@@ -1,0 +1,23 @@
+meta {
+  name: Get Token
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:8080/realms/PolarBookshop/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: inherit
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: admin-cli
+  username: bjorn
+  password: bjorn
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

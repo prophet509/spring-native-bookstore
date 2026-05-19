@@ -39,9 +39,9 @@ spring:
         acceptOrder-out-0:
           destination: order-accepted
         orderCreated-out-0:
-          destination: order-events
+          destination: order-created-events
         orderCancelled-out-0:
-          destination: order-events
+          destination: order-cancelled-events
   r2dbc:
     url: r2dbc:postgresql://localhost:5433/polardb_order
     username: user

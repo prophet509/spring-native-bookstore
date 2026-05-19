@@ -28,10 +28,10 @@ spring:
       source: inventoryDecision
       bindings:
         reserveStock-in-0:
-          destination: order-events
+          destination: order-created-events
           group: ${spring.application.name}
         releaseStock-in-0:
-          destination: order-events
+          destination: order-cancelled-events
           group: ${spring.application.name}
         inventoryDecision-out-0:
           destination: inventory-events

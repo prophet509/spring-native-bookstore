@@ -5,7 +5,6 @@ import static com.locpham.bookstore.inventoryservice.adapter.out.persistence.joo
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.records.ReservationRecord;
 import com.locpham.bookstore.inventoryservice.application.port.out.ReservationPort;
 import com.locpham.bookstore.inventoryservice.domain.Reservation;
-import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.exception.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,7 +22,7 @@ public class JooqReservationRepositoryImpl implements ReservationPort {
     }
 
     @Override
-    public Flux<Reservation> findByOrderId(UUID orderId) {
+    public Flux<Reservation> findByOrderId(Long orderId) {
         return Flux.from(dsl.selectFrom(RESERVATION).where(RESERVATION.ORDER_ID.eq(orderId)))
                 .map(JooqReservationMapper::toDomain);
     }

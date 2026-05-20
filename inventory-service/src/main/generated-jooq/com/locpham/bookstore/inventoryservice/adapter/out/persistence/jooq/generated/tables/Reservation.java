@@ -61,7 +61,7 @@ public class Reservation extends TableImpl<ReservationRecord> {
     /**
      * The column <code>public.reservation.order_id</code>.
      */
-    public final TableField<ReservationRecord, UUID> ORDER_ID = createField(DSL.name("order_id"), SQLDataType.UUID.nullable(false), this, "");
+    public final TableField<ReservationRecord, Long> ORDER_ID = createField(DSL.name("order_id"), SQLDataType.BIGINT.nullable(false), this, "");
 
     /**
      * The column <code>public.reservation.isbn</code>.

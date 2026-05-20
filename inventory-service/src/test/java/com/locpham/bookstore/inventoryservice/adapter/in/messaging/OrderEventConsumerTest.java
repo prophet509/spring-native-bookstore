@@ -85,7 +85,7 @@ class OrderEventConsumerTest {
         var isbn = "ABC-" + UUID.randomUUID();
         inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
-        var orderId = UUID.randomUUID();
+        var orderId = 1L;
         var message =
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
@@ -113,7 +113,7 @@ class OrderEventConsumerTest {
     void orderCreated_duplicate_shouldNotDoubleDecrementStock() throws Exception {
         inventoryRepository.save(InventoryItem.create("DUP", 10)).block();
 
-        var orderId = UUID.randomUUID();
+        var orderId = 2L;
         var message =
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem("DUP", 2)));
@@ -163,7 +163,7 @@ class OrderEventConsumerTest {
         var isbn = "ABC-" + UUID.randomUUID();
         inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
-        var orderId = UUID.randomUUID();
+        var orderId = 3L;
 
         // Act: Send order-created event
         var createMessage =

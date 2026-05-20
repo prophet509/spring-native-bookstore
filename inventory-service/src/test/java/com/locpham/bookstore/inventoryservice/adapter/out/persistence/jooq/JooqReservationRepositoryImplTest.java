@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.locpham.bookstore.inventoryservice.TestcontainersConfiguration;
 import com.locpham.bookstore.inventoryservice.domain.Reservation;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,7 +28,7 @@ class JooqReservationRepositoryImplTest {
 
     @Test
     void saveAndFindByOrderId() {
-        var orderId = UUID.randomUUID();
+        var orderId = 1L;
         var reservation = Reservation.create(orderId, "123", 2);
 
         StepVerifier.create(
@@ -47,7 +46,7 @@ class JooqReservationRepositoryImplTest {
 
     @Test
     void save_shouldFailWhenDuplicateOrderIdAndIsbn() {
-        var orderId = UUID.randomUUID();
+        var orderId = 2L;
         var reservation = Reservation.create(orderId, "DUP", 1);
 
         Mono<Void> flow =

@@ -1,8 +1,6 @@
 package com.locpham.bookstore.inventoryservice.domain;
 
-import java.util.UUID;
-
-public record InventoryDecision(UUID orderId, DecisionStatus status, String reason) {
+public record InventoryDecision(Long orderId, DecisionStatus status, String reason) {
 
     public InventoryDecision {
         if (orderId == null) {
@@ -13,11 +11,11 @@ public record InventoryDecision(UUID orderId, DecisionStatus status, String reas
         }
     }
 
-    public static InventoryDecision reserved(UUID orderId) {
+    public static InventoryDecision reserved(Long orderId) {
         return new InventoryDecision(orderId, DecisionStatus.RESERVED, null);
     }
 
-    public static InventoryDecision rejected(UUID orderId, String reason) {
+    public static InventoryDecision rejected(Long orderId, String reason) {
         return new InventoryDecision(orderId, DecisionStatus.REJECTED, reason);
     }
 

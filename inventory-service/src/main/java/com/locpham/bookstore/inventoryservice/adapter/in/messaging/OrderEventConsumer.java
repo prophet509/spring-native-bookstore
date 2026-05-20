@@ -6,7 +6,6 @@ import com.locpham.bookstore.inventoryservice.application.port.in.ReleaseStockUs
 import com.locpham.bookstore.inventoryservice.application.port.in.ReserveStockUseCase;
 import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import java.time.Duration;
-import java.util.UUID;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +35,16 @@ public class OrderEventConsumer {
                                                 "Received order.created for order {}",
                                                 message.orderId()))
                         .map(OrderEventConsumer::toReserveRequest)
-                        .flatMap(
+                        .concatMap(
                                 request ->
                                         reserveStockUseCase
                                                 .reserveForOrder(request)
+                                                .retryWhen(OPTIMISTIC_LOCK_RETRY)
                                                 .onErrorResume(
                                                         DataIntegrityViolationException.class,
                                                         e ->
                                                                 handleDuplicateReservation(
                                                                         request.orderId(), e)))
-                        .retryWhen(OPTIMISTIC_LOCK_RETRY)
                         .doOnNext(
                                 decision ->
                                         logger.info(
@@ -82,7 +81,7 @@ public class OrderEventConsumer {
     }
 
     private static Mono<InventoryDecision> handleDuplicateReservation(
-            UUID orderId, DataIntegrityViolationException e) {
+            Long orderId, DataIntegrityViolationException e) {
         logger.warn("Duplicate reservation attempt for order {}: {}", orderId, e.getMessage());
         return Mono.just(InventoryDecision.reserved(orderId));
     }

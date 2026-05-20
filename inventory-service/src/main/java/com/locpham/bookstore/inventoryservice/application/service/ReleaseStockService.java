@@ -7,7 +7,6 @@ import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
 import com.locpham.bookstore.inventoryservice.domain.Reservation;
 import com.locpham.bookstore.inventoryservice.domain.ReservationStatus;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +29,7 @@ public class ReleaseStockService implements ReleaseStockUseCase {
 
     @Transactional
     @Override
-    public Mono<Void> releaseForOrder(UUID orderId) {
+    public Mono<Void> releaseForOrder(Long orderId) {
         return reservationPort
                 .findByOrderId(orderId)
                 .filter(r -> r.status() == ReservationStatus.RESERVED)

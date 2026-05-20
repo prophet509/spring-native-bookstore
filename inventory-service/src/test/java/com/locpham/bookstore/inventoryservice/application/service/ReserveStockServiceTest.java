@@ -14,7 +14,6 @@ import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
 import com.locpham.bookstore.inventoryservice.domain.Reservation;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,7 +36,7 @@ class ReserveStockServiceTest {
 
     @Test
     void reserveForOrder_shouldReserveAllItemsAndPublishReserved() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 1L;
         var request =
                 new ReserveStockUseCase.OrderReserveRequest(
                         orderId,
@@ -68,7 +67,7 @@ class ReserveStockServiceTest {
 
     @Test
     void reserveForOrder_shouldRejectWhenInsufficientStock() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 2L;
         var request =
                 new ReserveStockUseCase.OrderReserveRequest(
                         orderId, List.of(new ReserveStockUseCase.OrderItem("123", 15)));
@@ -91,7 +90,7 @@ class ReserveStockServiceTest {
 
     @Test
     void reserveForOrder_shouldRejectWhenItemNotFound() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 3L;
         var request =
                 new ReserveStockUseCase.OrderReserveRequest(
                         orderId, List.of(new ReserveStockUseCase.OrderItem("999", 1)));
@@ -112,7 +111,7 @@ class ReserveStockServiceTest {
 
     @Test
     void reserveForOrder_whenAlreadyReserved_shouldNotReserveAgain() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 4L;
         var request =
                 new ReserveStockUseCase.OrderReserveRequest(
                         orderId, List.of(new ReserveStockUseCase.OrderItem("123", 2)));

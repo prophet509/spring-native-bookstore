@@ -10,7 +10,7 @@ class ReservationTest {
 
     @Test
     void create_shouldSetStatusToReserved() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 1L;
         Reservation reservation = Reservation.create(orderId, "1234567890", 5);
 
         assertThat(reservation.reservationId()).isNull();
@@ -22,7 +22,7 @@ class ReservationTest {
 
     @Test
     void markReleased_shouldChangeStatusToReleased() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 2L;
         UUID reservationId = UUID.randomUUID();
         Reservation reservation =
                 new Reservation(
@@ -36,7 +36,7 @@ class ReservationTest {
 
     @Test
     void markReleased_shouldThrowWhenNotReserved() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 3L;
         Reservation reservation =
                 new Reservation(
                         UUID.randomUUID(), orderId, "1234567890", 5, ReservationStatus.RELEASED);

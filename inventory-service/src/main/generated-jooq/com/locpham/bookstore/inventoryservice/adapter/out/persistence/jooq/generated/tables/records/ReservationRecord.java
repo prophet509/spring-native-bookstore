@@ -39,7 +39,7 @@ public class ReservationRecord extends UpdatableRecordImpl<ReservationRecord> {
     /**
      * Setter for <code>public.reservation.order_id</code>.
      */
-    public ReservationRecord setOrderId(UUID value) {
+    public ReservationRecord setOrderId(Long value) {
         set(1, value);
         return this;
     }
@@ -47,8 +47,8 @@ public class ReservationRecord extends UpdatableRecordImpl<ReservationRecord> {
     /**
      * Getter for <code>public.reservation.order_id</code>.
      */
-    public UUID getOrderId() {
-        return (UUID) get(1);
+    public Long getOrderId() {
+        return (Long) get(1);
     }
 
     /**
@@ -134,7 +134,7 @@ public class ReservationRecord extends UpdatableRecordImpl<ReservationRecord> {
     /**
      * Create a detached, initialised ReservationRecord
      */
-    public ReservationRecord(UUID id, UUID orderId, String isbn, Integer quantity, String status, LocalDateTime createdAt) {
+    public ReservationRecord(UUID id, Long orderId, String isbn, Integer quantity, String status, LocalDateTime createdAt) {
         super(Reservation.RESERVATION);
 
         setId(id);

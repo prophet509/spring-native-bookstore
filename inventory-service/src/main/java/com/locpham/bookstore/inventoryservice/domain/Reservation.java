@@ -3,7 +3,7 @@ package com.locpham.bookstore.inventoryservice.domain;
 import java.util.UUID;
 
 public record Reservation(
-        UUID reservationId, UUID orderId, String isbn, int quantity, ReservationStatus status) {
+        UUID reservationId, Long orderId, String isbn, int quantity, ReservationStatus status) {
 
     public Reservation {
         if (orderId == null) {
@@ -20,7 +20,7 @@ public record Reservation(
         }
     }
 
-    public static Reservation create(UUID orderId, String isbn, int quantity) {
+    public static Reservation create(Long orderId, String isbn, int quantity) {
         return new Reservation(null, orderId, isbn, quantity, ReservationStatus.RESERVED);
     }
 

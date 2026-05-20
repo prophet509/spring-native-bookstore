@@ -31,7 +31,7 @@ class ReleaseStockServiceTest {
 
     @Test
     void releaseForOrder_shouldReleaseWhenReservationsExist() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 1L;
         Reservation reservation =
                 new Reservation(UUID.randomUUID(), orderId, "123", 2, ReservationStatus.RESERVED);
         InventoryItem item = new InventoryItem(1L, "123", 8, 2, 0);
@@ -46,7 +46,7 @@ class ReleaseStockServiceTest {
 
     @Test
     void releaseForOrder_shouldBeIdempotentWhenNoReservations() {
-        UUID orderId = UUID.randomUUID();
+        Long orderId = 2L;
 
         given(reservationPort.findByOrderId(orderId)).willReturn(Flux.empty());
 

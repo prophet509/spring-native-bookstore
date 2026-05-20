@@ -1,13 +1,12 @@
 package com.locpham.bookstore.inventoryservice.application.port.in;
 
 import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
-import java.util.UUID;
 import reactor.core.publisher.Mono;
 
 public interface ReserveStockUseCase {
     Mono<InventoryDecision> reserveForOrder(OrderReserveRequest request);
 
-    record OrderReserveRequest(UUID orderId, java.util.List<OrderItem> items) {
+    record OrderReserveRequest(Long orderId, java.util.List<OrderItem> items) {
         public OrderReserveRequest {
             if (orderId == null) {
                 throw new IllegalArgumentException("Order ID must not be null");

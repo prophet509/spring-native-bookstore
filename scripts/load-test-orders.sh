@@ -6,7 +6,7 @@ set -euo pipefail
 
 TOTAL=${1:-1000}
 CONCURRENCY=${2:-50}
-ISBN="1234567890"
+ISBN="9781617296956"
 ORDER_URL="http://localhost:9002/orders"
 INVENTORY_URL="http://localhost:9004/inventory/${ISBN}"
 KEYCLOAK_URL="http://localhost:8080/realms/PolarBookshop/protocol/openid-connect/token"
@@ -35,7 +35,7 @@ echo "  Initial available stock: ${INITIAL_STOCK}"
 echo "[3/4] Firing ${TOTAL} POST /orders requests (concurrency=${CONCURRENCY})..."
 START=$(date +%s%N)
 
-rm -f /tmp/load-test-results.txt
+RESULTS_FILE=$(mktemp /tmp/load-test-results.XXXXXX)
 seq 1 "$TOTAL" | xargs -P "$CONCURRENCY" -I {} \
   sh -c 'curl -s -o /dev/null -w "%{http_code}\n" \
     --max-time 10 --connect-timeout 3 \
@@ -43,11 +43,11 @@ seq 1 "$TOTAL" | xargs -P "$CONCURRENCY" -I {} \
     -H "Authorization: Bearer $1" \
     -H "Content-Type: application/json" \
     -d "{\"isbn\":\"$2\",\"quantity\":1}" \
-    >> /tmp/load-test-results.txt' "$ORDER_URL" "$TOKEN" "$ISBN" &
+    >> "$3"' "$ORDER_URL" "$TOKEN" "$ISBN" "$RESULTS_FILE" &
 
 XARGS_PID=$!
 while kill -0 "$XARGS_PID" 2>/dev/null; do
-  DONE=$(wc -l < /tmp/load-test-results.txt 2>/dev/null || echo 0)
+  DONE=$(wc -l < "$RESULTS_FILE" 2>/dev/null || echo 0)
   printf "\r  Progress: %d/%d (%d%%)" "$DONE" "$TOTAL" "$((DONE * 100 / TOTAL))"
   sleep 0.5
 done
@@ -58,16 +58,17 @@ END=$(date +%s%N)
 ELAPSED=$(( (END - START) / 1000000 ))
 
 # 4. Results
-TOTAL_SENT=$(wc -l < /tmp/load-test-results.txt)
-SUCCESS=$(grep -c "^200$" /tmp/load-test-results.txt || echo 0)
-ERRORS=$(grep -cv "^200$" /tmp/load-test-results.txt || echo 0)
+TOTAL_SENT=$(wc -l < "$RESULTS_FILE")
+SUCCESS=$(grep -c "^2[0-9][0-9]$" "$RESULTS_FILE" || true)
+ERRORS=$(grep -cv "^2[0-9][0-9]$" "$RESULTS_FILE" || true)
 
 echo ""
 echo "=== Results ==="
 echo "  Duration:   ${ELAPSED}ms"
 echo "  Sent:       ${TOTAL_SENT}"
-echo "  Success:    ${SUCCESS} (HTTP 200)"
-echo "  Non-200:    ${ERRORS}"
+echo "  Success:    ${SUCCESS} (HTTP 2xx)"
+echo "  Non-2xx:    ${ERRORS}"
+echo "  HTTP codes: $(sort "$RESULTS_FILE" | uniq -c | tr '\n' ' ')"
 echo "  RPS:        $(( TOTAL_SENT * 1000 / (ELAPSED + 1) ))"
 
 # 5. Verify inventory
@@ -92,4 +93,4 @@ EXPECTED_RESERVED=$((INITIAL_STOCK - AVAILABLE))
 echo "  Stock consumed: ${EXPECTED_RESERVED} (initial ${INITIAL_STOCK} - available ${AVAILABLE})"
 echo "  Reserved field: ${RESERVED}"
 
-rm -f /tmp/load-test-results.txt
+rm -f "$RESULTS_FILE"

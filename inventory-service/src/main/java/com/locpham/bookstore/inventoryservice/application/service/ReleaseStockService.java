@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 @Service
 public class ReleaseStockService implements ReleaseStockUseCase {
 
-    private static final Logger logger = LoggerFactory.getLogger(ReleaseStockService.class);
+    private static final Logger log = LoggerFactory.getLogger(ReleaseStockService.class);
 
     private final InventoryPort inventoryPort;
     private final ReservationPort reservationPort;
@@ -30,6 +30,7 @@ public class ReleaseStockService implements ReleaseStockUseCase {
     @Transactional
     @Override
     public Mono<Void> releaseForOrder(Long orderId) {
+        log.info("Processing stock release for orderId={}", orderId);
         return reservationPort
                 .findByOrderId(orderId)
                 .filter(r -> r.status() == ReservationStatus.RESERVED)
@@ -37,11 +38,16 @@ public class ReleaseStockService implements ReleaseStockUseCase {
                 .flatMap(
                         reservations -> {
                             if (reservations.isEmpty()) {
-                                logger.info(
-                                        "No active reservations found for order {} — idempotent no-op",
+                                log.info(
+                                        "No active reservations found for orderId={} — idempotent no-op",
                                         orderId);
                                 return Mono.empty();
                             }
+
+                            log.debug(
+                                    "Releasing {} reservations for orderId={}",
+                                    reservations.size(),
+                                    orderId);
 
                             List<String> isbns =
                                     reservations.stream()
@@ -68,6 +74,12 @@ public class ReleaseStockService implements ReleaseStockUseCase {
                                                                                                 + r
                                                                                                         .isbn());
                                                                             }
+                                                                            log.debug(
+                                                                                    "Releasing isbn={} quantity={} currentReserved={}",
+                                                                                    r.isbn(),
+                                                                                    r.quantity(),
+                                                                                    item
+                                                                                            .reservedQuantity());
                                                                             return item.release(
                                                                                     r.quantity());
                                                                         })
@@ -95,7 +107,13 @@ public class ReleaseStockService implements ReleaseStockUseCase {
                                                                         updatedReservations,
                                                                         objects -> objects)
                                                                 .then();
-                                                    }));
+                                                    }))
+                                    .doOnSuccess(
+                                            v ->
+                                                    log.info(
+                                                            "Stock released successfully for orderId={} isbns={}",
+                                                            orderId,
+                                                            isbns));
                         })
                 .then();
     }

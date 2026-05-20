@@ -74,3 +74,10 @@ management:
 logging:
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+  level:
+    com.locpham.bookstore.inventoryservice: INFO
+    com.locpham.bookstore.inventoryservice.adapter.out.persistence: DEBUG
+    com.locpham.bookstore.inventoryservice.adapter.in.messaging: INFO
+    com.locpham.bookstore.inventoryservice.application.service: INFO
+    org.springframework.cloud.stream: INFO
+    org.jooq: WARN

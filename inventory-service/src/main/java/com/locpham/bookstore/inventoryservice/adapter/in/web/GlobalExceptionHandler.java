@@ -5,6 +5,8 @@ import com.locpham.bookstore.inventoryservice.domain.InventoryException;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,9 @@ import reactor.core.publisher.Mono;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     private void enrichProblemDetail(
             ProblemDetail problemDetail,
             org.springframework.web.server.ServerWebExchange exchange) {
@@ -32,6 +37,8 @@ public class GlobalExceptionHandler {
     public Mono<ResponseEntity<ProblemDetail>> handleInsufficientStockException(
             InsufficientStockException ex,
             org.springframework.web.server.ServerWebExchange exchange) {
+        log.warn(
+                "Insufficient stock: {} path={}", ex.getMessage(), exchange.getRequest().getPath());
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         problemDetail.setType(URI.create("https://bookstore.api/errors/insufficient-stock"));
@@ -44,6 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InventoryException.class)
     public Mono<ResponseEntity<ProblemDetail>> handleInventoryException(
             InventoryException ex, org.springframework.web.server.ServerWebExchange exchange) {
+        log.warn("Inventory error: {} path={}", ex.getMessage(), exchange.getRequest().getPath());
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problemDetail.setType(URI.create("https://bookstore.api/errors/inventory-error"));
@@ -56,6 +64,7 @@ public class GlobalExceptionHandler {
     public Mono<ResponseEntity<ProblemDetail>> handleValidationException(
             WebExchangeBindException ex,
             org.springframework.web.server.ServerWebExchange exchange) {
+        log.warn("Validation failed: {} path={}", ex.getMessage(), exchange.getRequest().getPath());
         java.util.Map<String, String> errors = new java.util.HashMap<>();
         ex.getBindingResult()
                 .getFieldErrors()
@@ -74,6 +83,10 @@ public class GlobalExceptionHandler {
     public Mono<ResponseEntity<ProblemDetail>> handleConstraintViolationException(
             ConstraintViolationException ex,
             org.springframework.web.server.ServerWebExchange exchange) {
+        log.warn(
+                "Constraint violation: {} path={}",
+                ex.getMessage(),
+                exchange.getRequest().getPath());
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
         problemDetail.setType(URI.create("https://bookstore.api/errors/validation-failed"));
@@ -95,6 +108,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Mono<ResponseEntity<ProblemDetail>> handleGenericException(
             Exception ex, org.springframework.web.server.ServerWebExchange exchange) {
+        log.error(
+                "Unexpected error path={}: {}",
+                exchange.getRequest().getPath(),
+                ex.getMessage(),
+                ex);
         ProblemDetail problemDetail =
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");

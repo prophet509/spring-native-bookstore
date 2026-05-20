@@ -32,14 +32,22 @@ public class OrderEventConsumer {
                 flux.doOnNext(
                                 message ->
                                         logger.info(
-                                                "Received order.created for order {}",
-                                                message.orderId()))
+                                                "Received order.created event orderId={} items={}",
+                                                message.orderId(),
+                                                message.items().size()))
                         .map(OrderEventConsumer::toReserveRequest)
                         .concatMap(
                                 request ->
                                         reserveStockUseCase
                                                 .reserveForOrder(request)
                                                 .retryWhen(OPTIMISTIC_LOCK_RETRY)
+                                                .doOnError(
+                                                        OptimisticLockingFailureException.class,
+                                                        e ->
+                                                                logger.error(
+                                                                        "Optimistic lock retries exhausted for orderId={}",
+                                                                        request.orderId(),
+                                                                        e))
                                                 .onErrorResume(
                                                         DataIntegrityViolationException.class,
                                                         e ->
@@ -48,9 +56,11 @@ public class OrderEventConsumer {
                         .doOnNext(
                                 decision ->
                                         logger.info(
-                                                "Reservation decision for order {}: {}",
+                                                "Reservation decision orderId={} status={}",
                                                 decision.orderId(),
                                                 decision.status()))
+                        .doOnError(
+                                e -> logger.error("Unexpected error in reserveStock consumer", e))
                         .subscribe();
     }
 
@@ -61,13 +71,18 @@ public class OrderEventConsumer {
                 flux.flatMap(
                                 message -> {
                                     logger.info(
-                                            "Received order.cancelled for order {}",
+                                            "Received order.cancelled event orderId={}",
                                             message.orderId());
                                     return releaseStockUseCase
                                             .releaseForOrder(message.orderId())
                                             .thenReturn(message.orderId());
                                 })
-                        .doOnNext(orderId -> logger.info("Stock released for order {}", orderId))
+                        .doOnNext(
+                                orderId ->
+                                        logger.info(
+                                                "Stock release completed for orderId={}", orderId))
+                        .doOnError(
+                                e -> logger.error("Unexpected error in releaseStock consumer", e))
                         .subscribe();
     }
 

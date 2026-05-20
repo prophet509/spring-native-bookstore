@@ -14,7 +14,7 @@ import reactor.core.publisher.Mono;
 @Service
 public class ProcessInventoryDecisionService implements ProcessInventoryDecisionUseCase {
 
-    private static final Logger logger =
+    private static final Logger log =
             LoggerFactory.getLogger(ProcessInventoryDecisionService.class);
 
     private final OrderQueryPort orderQueryPort;
@@ -33,29 +33,49 @@ public class ProcessInventoryDecisionService implements ProcessInventoryDecision
     @Transactional
     @Override
     public Mono<Void> processDecision(Long orderId, DecisionStatus status) {
+        log.debug("Processing inventory decision orderId={} status={}", orderId, status);
         return orderQueryPort
                 .findById(orderId)
                 .switchIfEmpty(
                         Mono.fromRunnable(
                                         () ->
-                                                logger.warn(
-                                                        "Inventory decision for missing order {} ignored",
+                                                log.warn(
+                                                        "Inventory decision for missing order ignored orderId={}",
                                                         orderId))
                                 .then(Mono.empty()))
                 .flatMap(
                         order -> {
                             if (order.status() != OrderStatus.PENDING) {
-                                // Idempotency: if already decided, ignore duplicates.
+                                log.debug(
+                                        "Order already processed, ignoring duplicate orderId={} currentStatus={}",
+                                        orderId,
+                                        order.status());
                                 return Mono.empty();
                             }
 
                             return switch (status) {
                                 case RESERVED -> orderCommandPort
                                         .save(order.accept())
+                                        .doOnSuccess(
+                                                o -> log.info("Order accepted orderId={}", orderId))
                                         .flatMap(orderEventPublisherPort::publishOrderAccepted)
                                         .then();
-                                case REJECTED -> orderCommandPort.save(order.reject()).then();
+                                case REJECTED -> orderCommandPort
+                                        .save(order.reject())
+                                        .doOnSuccess(
+                                                o ->
+                                                        log.info(
+                                                                "Order rejected by inventory orderId={}",
+                                                                orderId))
+                                        .then();
                             };
-                        });
+                        })
+                .doOnError(
+                        e ->
+                                log.error(
+                                        "Failed to process inventory decision orderId={} error={}",
+                                        orderId,
+                                        e.getMessage(),
+                                        e));
     }
 }

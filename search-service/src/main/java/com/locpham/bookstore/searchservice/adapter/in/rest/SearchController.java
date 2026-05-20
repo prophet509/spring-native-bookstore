@@ -3,6 +3,8 @@ package com.locpham.bookstore.searchservice.adapter.in.rest;
 import com.locpham.bookstore.searchservice.application.in.SearchBookUseCase;
 import com.locpham.bookstore.searchservice.domain.BookDocument;
 import com.locpham.bookstore.searchservice.domain.SearchPage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +21,8 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/search")
 public class SearchController {
 
+    private static final Logger log = LoggerFactory.getLogger(SearchController.class);
+
     private final SearchBookUseCase searchBookUseCase;
 
     public SearchController(SearchBookUseCase searchBookUseCase) {
@@ -34,6 +38,16 @@ public class SearchController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sort) {
+        log.debug(
+                "Search request q={} author={} publisher={} isbn={} page={} size={} sort={}",
+                q,
+                author,
+                publisher,
+                isbn,
+                page,
+                size,
+                sort);
+
         Sort sortObj =
                 sort != null
                         ? Sort.by(Sort.Direction.fromString(sort.split(",")[1]), sort.split(",")[0])
@@ -54,16 +68,27 @@ public class SearchController {
             result = searchBookUseCase.searchAll(pageable);
         }
 
-        return result.map(
-                searchPage ->
-                        new PageImpl<>(
-                                searchPage.content().stream().map(SearchResponse::from).toList(),
-                                PageRequest.of(searchPage.pageNumber(), searchPage.pageSize()),
-                                searchPage.totalElements()));
+        return result.doOnSuccess(
+                        searchPage ->
+                                log.info(
+                                        "Search completed totalElements={} page={} size={}",
+                                        searchPage.totalElements(),
+                                        searchPage.pageNumber(),
+                                        searchPage.pageSize()))
+                .map(
+                        searchPage ->
+                                new PageImpl<>(
+                                        searchPage.content().stream()
+                                                .map(SearchResponse::from)
+                                                .toList(),
+                                        PageRequest.of(
+                                                searchPage.pageNumber(), searchPage.pageSize()),
+                                        searchPage.totalElements()));
     }
 
     @GetMapping("/suggest")
     public Flux<String> suggest(@RequestParam String q) {
+        log.debug("Suggest request q={}", q);
         return searchBookUseCase.suggestByTitle(q);
     }
 }

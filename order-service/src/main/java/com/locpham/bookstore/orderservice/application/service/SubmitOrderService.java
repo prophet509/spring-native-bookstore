@@ -8,12 +8,17 @@ import com.locpham.bookstore.orderservice.application.port.out.OrderEventPublish
 import com.locpham.bookstore.orderservice.domain.model.BookSnapshot;
 import com.locpham.bookstore.orderservice.domain.model.Order;
 import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Service
 public class SubmitOrderService implements SubmitOrderUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(SubmitOrderService.class);
+
     private final CatalogBookPort catalogBookPort;
     private final OrderCommandPort orderCommandPort;
     private final OrderEventPublisherPort eventPublisher;
@@ -30,6 +35,11 @@ public class SubmitOrderService implements SubmitOrderUseCase {
     @Transactional
     @Override
     public Mono<Order> submitOrder(SubmitOrderCommand command) {
+        log.debug(
+                "Submitting order isbn={} quantity={} user={}",
+                command.isbn(),
+                command.quantity(),
+                command.createdBy());
         return catalogBookPort
                 .loadBook(command.isbn())
                 .map(book -> buildPendingOrder(book, command.quantity(), command.createdBy()))
@@ -41,9 +51,26 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                 .doOnNext(
                         order -> {
                             if (order.status() == OrderStatus.PENDING) {
+                                log.info(
+                                        "Order submitted orderId={} isbn={} status=PENDING",
+                                        order.id(),
+                                        command.isbn());
                                 eventPublisher.publishOrderCreated(order).subscribe();
+                            } else {
+                                log.info(
+                                        "Order rejected orderId={} isbn={} status={}",
+                                        order.id(),
+                                        command.isbn(),
+                                        order.status());
                             }
-                        });
+                        })
+                .doOnError(
+                        e ->
+                                log.error(
+                                        "Failed to submit order isbn={} error={}",
+                                        command.isbn(),
+                                        e.getMessage(),
+                                        e));
     }
 
     private Order buildRejectedOrder(String isbn, int quantity, String createdBy) {

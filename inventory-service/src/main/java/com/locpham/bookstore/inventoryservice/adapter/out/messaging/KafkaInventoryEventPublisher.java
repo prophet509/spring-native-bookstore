@@ -27,15 +27,25 @@ public class KafkaInventoryEventPublisher implements InventoryEventPublisher {
         return Mono.fromRunnable(
                 () -> {
                     logger.info(
-                            "Publishing inventory decision for order {}: {}",
+                            "Publishing inventory decision orderId={} status={} reason={}",
                             decision.orderId(),
-                            decision.status());
+                            decision.status(),
+                            decision.reason());
                     var message =
                             new InventoryDecisionMessage(
                                     decision.orderId(),
                                     decision.status().name(),
                                     decision.reason());
-                    streamBridge.send("inventoryDecision-out-0", message);
+                    boolean sent = streamBridge.send("inventoryDecision-out-0", message);
+                    if (sent) {
+                        logger.debug(
+                                "Inventory decision published successfully orderId={}",
+                                decision.orderId());
+                    } else {
+                        logger.error(
+                                "Failed to publish inventory decision orderId={}",
+                                decision.orderId());
+                    }
                 });
     }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "bookstore",
+  "description": "Spring bookstore development agent",
+  "prompt": "file://AGENTS.md",
+  "resources": [
+    "file://AGENTS.md",
+    "file://**/build.gradle"
+  ]
+}

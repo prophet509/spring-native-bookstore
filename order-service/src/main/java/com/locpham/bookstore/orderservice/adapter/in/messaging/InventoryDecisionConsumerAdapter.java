@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class InventoryDecisionConsumerAdapter {
@@ -18,20 +19,26 @@ public class InventoryDecisionConsumerAdapter {
     public Consumer<Flux<InventoryDecisionMessage>> handleInventoryDecision(
             ProcessInventoryDecisionUseCase processInventoryDecisionUseCase) {
         return flux ->
-                flux.concatMap(
+                flux.flatMap(
                                 message -> {
                                     logger.info(
                                             "Received inventory decision for order {}: {}",
                                             message.orderId(),
                                             message.status());
-                                    return processInventoryDecisionUseCase.processDecision(
-                                            message.orderId(), toStatus(message.status()));
-                                })
-                        .doOnError(
-                                e ->
-                                        logger.error(
-                                                "Unexpected error in inventory decision consumer",
-                                                e))
+                                    return processInventoryDecisionUseCase
+                                            .processDecision(
+                                                    message.orderId(), toStatus(message.status()))
+                                            .onErrorResume(
+                                                    e -> {
+                                                        logger.error(
+                                                                "Failed to process inventory decision for order {}: {}",
+                                                                message.orderId(),
+                                                                message.status(),
+                                                                e);
+                                                        return Mono.empty();
+                                                    });
+                                },
+                                8) // max 8 concurrent to avoid pool exhaustion
                         .subscribe();
     }
 

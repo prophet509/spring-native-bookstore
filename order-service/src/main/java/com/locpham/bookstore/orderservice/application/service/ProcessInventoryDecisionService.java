@@ -8,7 +8,6 @@ import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -30,7 +29,6 @@ public class ProcessInventoryDecisionService implements ProcessInventoryDecision
         this.orderEventPublisherPort = orderEventPublisherPort;
     }
 
-    @Transactional
     @Override
     public Mono<Void> processDecision(Long orderId, DecisionStatus status) {
         log.debug("Processing inventory decision orderId={} status={}", orderId, status);

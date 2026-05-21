@@ -9,11 +9,13 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Component
 @Primary
 public class KafkaOrderEventPublisher implements OrderEventPublisherPort {
-    private static final Logger logger = LoggerFactory.getLogger(KafkaOrderEventPublisher.class);
+
+    private static final Logger log = LoggerFactory.getLogger(KafkaOrderEventPublisher.class);
     private final StreamBridge streamBridge;
 
     public KafkaOrderEventPublisher(StreamBridge streamBridge) {
@@ -22,34 +24,40 @@ public class KafkaOrderEventPublisher implements OrderEventPublisherPort {
 
     @Override
     public Mono<Void> publishOrderAccepted(Order order) {
-        return Mono.fromRunnable(
-                () -> {
-                    logger.info("Publishing order accepted event: {}", order.id());
-                    streamBridge.send("acceptOrder-out-0", new OrderAcceptedMessage(order.id()));
-                });
+        return Mono.<Void>fromRunnable(
+                        () -> {
+                            log.info("Publishing order accepted event: {}", order.id());
+                            streamBridge.send(
+                                    "acceptOrder-out-0", new OrderAcceptedMessage(order.id()));
+                        })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @Override
     public Mono<Void> publishOrderCreated(Order order) {
-        return Mono.fromRunnable(
-                () -> {
-                    logger.info("Publishing order created event: {}", order.id());
-                    var message =
-                            new OrderCreatedMessage(
-                                    order.id(),
-                                    List.of(
-                                            new OrderCreatedMessage.OrderItem(
-                                                    order.book().isbn(), order.quantity())));
-                    streamBridge.send("orderCreated-out-0", message);
-                });
+        return Mono.<Void>fromRunnable(
+                        () -> {
+                            log.info("Publishing order created event: {}", order.id());
+                            var message =
+                                    new OrderCreatedMessage(
+                                            order.id(),
+                                            List.of(
+                                                    new OrderCreatedMessage.OrderItem(
+                                                            order.book().isbn(),
+                                                            order.quantity())));
+                            streamBridge.send("orderCreated-out-0", message);
+                        })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @Override
     public Mono<Void> publishOrderCancelled(Long orderId) {
-        return Mono.fromRunnable(
-                () -> {
-                    logger.info("Publishing order cancelled event: {}", orderId);
-                    streamBridge.send("orderCancelled-out-0", new OrderCancelledMessage(orderId));
-                });
+        return Mono.<Void>fromRunnable(
+                        () -> {
+                            log.info("Publishing order cancelled event: {}", orderId);
+                            streamBridge.send(
+                                    "orderCancelled-out-0", new OrderCancelledMessage(orderId));
+                        })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }

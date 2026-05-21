@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class OrderDispatchedConsumerAdapter {
@@ -18,8 +19,21 @@ public class OrderDispatchedConsumerAdapter {
     public Consumer<Flux<OrderDispatchedMessage>> dispatchOrder(
             MarkOrderDispatchedUseCase markOrderDispatchedUseCase) {
         return flux ->
-                flux.map(message -> new MarkOrderDispatchedCommand(message.orderId()))
-                        .flatMap(markOrderDispatchedUseCase::markOrderDispatched)
+                flux.flatMap(
+                                message -> {
+                                    var command = new MarkOrderDispatchedCommand(message.orderId());
+                                    return markOrderDispatchedUseCase
+                                            .markOrderDispatched(command)
+                                            .onErrorResume(
+                                                    e -> {
+                                                        logger.error(
+                                                                "Failed to mark order dispatched for orderId={}",
+                                                                message.orderId(),
+                                                                e);
+                                                        return Mono.empty();
+                                                    });
+                                },
+                                8) // max 8 concurrent to avoid pool exhaustion
                         .doOnNext(
                                 order ->
                                         logger.info(

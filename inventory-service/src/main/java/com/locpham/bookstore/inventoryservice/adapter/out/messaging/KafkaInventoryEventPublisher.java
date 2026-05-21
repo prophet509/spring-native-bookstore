@@ -9,6 +9,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Component
 @Primary
@@ -24,31 +25,19 @@ public class KafkaInventoryEventPublisher implements InventoryEventPublisher {
 
     @Override
     public Mono<Void> publishInventoryDecision(InventoryDecision decision) {
-        return Mono.fromRunnable(
-                () -> {
-                    logger.info(
-                            "Publishing inventory decision orderId={} status={} reason={}",
-                            decision.orderId(),
-                            decision.status(),
-                            decision.reason());
-                    var message =
-                            new InventoryDecisionMessage(
+        return Mono.<Void>fromRunnable(
+                        () -> {
+                            logger.info(
+                                    "Publishing inventory decision orderId={} status={}",
                                     decision.orderId(),
-                                    decision.status().name(),
-                                    decision.reason());
-                    boolean sent = streamBridge.send("inventoryDecision-out-0", message);
-                    if (sent) {
-                        logger.info(
-                                "Inventory decision published successfully orderId={}",
-                                decision.orderId());
-                    } else {
-                        logger.error(
-                                "Failed to publish inventory decision orderId={}",
-                                decision.orderId());
-                        throw new IllegalStateException(
-                                "Failed to publish inventory decision for orderId="
-                                        + decision.orderId());
-                    }
-                });
+                                    decision.status());
+                            var message =
+                                    new InventoryDecisionMessage(
+                                            decision.orderId(),
+                                            decision.status().name(),
+                                            decision.reason());
+                            streamBridge.send("inventoryDecision-out-0", message);
+                        })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }

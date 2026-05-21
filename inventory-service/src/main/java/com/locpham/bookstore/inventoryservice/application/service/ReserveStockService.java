@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -34,7 +33,6 @@ public class ReserveStockService implements ReserveStockUseCase {
         this.eventPublisher = eventPublisher;
     }
 
-    @Transactional
     @Override
     public Mono<InventoryDecision> reserveForOrder(OrderReserveRequest request) {
         List<String> isbns =

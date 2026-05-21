@@ -29,50 +29,36 @@ public class OrderEventConsumer {
     public Consumer<Flux<OrderCreatedMessage>> reserveStock(
             ReserveStockUseCase reserveStockUseCase) {
         return flux ->
-                flux.doOnNext(
-                                message ->
-                                        logger.info(
-                                                "Received order.created event orderId={} items={}",
-                                                message.orderId(),
-                                                message.items().size()))
-                        .map(OrderEventConsumer::toReserveRequest)
-                        .concatMap(
-                                request ->
-                                        reserveStockUseCase
-                                                .reserveForOrder(request)
-                                                .doOnSubscribe(
-                                                        subscription ->
-                                                                logger.info(
-                                                                        "Reservation processing started orderId={} items={}",
-                                                                        request.orderId(),
-                                                                        request.items().size()))
-                                                .doOnSuccess(
-                                                        decision ->
-                                                                logger.info(
-                                                                        "Reservation processing completed orderId={} status={}",
-                                                                        decision.orderId(),
-                                                                        decision.status()))
-                                                .retryWhen(OPTIMISTIC_LOCK_RETRY)
-                                                .doOnError(
-                                                        OptimisticLockingFailureException.class,
-                                                        e ->
-                                                                logger.error(
-                                                                        "Optimistic lock retries exhausted for orderId={}",
-                                                                        request.orderId(),
-                                                                        e))
-                                                .onErrorResume(
-                                                        DataIntegrityViolationException.class,
-                                                        e ->
-                                                                handleDuplicateReservation(
-                                                                        request.orderId(), e)))
-                        .doOnNext(
-                                decision ->
-                                        logger.info(
-                                                "Reservation decision orderId={} status={}",
-                                                decision.orderId(),
-                                                decision.status()))
-                        .doOnError(
-                                e -> logger.error("Unexpected error in reserveStock consumer", e))
+                flux.flatMap(
+                                message -> {
+                                    logger.info(
+                                            "Received order.created event orderId={} items={}",
+                                            message.orderId(),
+                                            message.items().size());
+                                    return reserveStockUseCase
+                                            .reserveForOrder(toReserveRequest(message))
+                                            .retryWhen(OPTIMISTIC_LOCK_RETRY)
+                                            .doOnSuccess(
+                                                    decision ->
+                                                            logger.info(
+                                                                    "Reservation decision orderId={} status={}",
+                                                                    decision.orderId(),
+                                                                    decision.status()))
+                                            .onErrorResume(
+                                                    DataIntegrityViolationException.class,
+                                                    e ->
+                                                            handleDuplicateReservation(
+                                                                    message.orderId(), e))
+                                            .onErrorResume(
+                                                    e -> {
+                                                        logger.error(
+                                                                "Failed to process reservation for orderId={}",
+                                                                message.orderId(),
+                                                                e);
+                                                        return Mono.empty();
+                                                    });
+                                },
+                                8)
                         .subscribe();
     }
 
@@ -87,14 +73,21 @@ public class OrderEventConsumer {
                                             message.orderId());
                                     return releaseStockUseCase
                                             .releaseForOrder(message.orderId())
-                                            .thenReturn(message.orderId());
-                                })
-                        .doOnNext(
-                                orderId ->
-                                        logger.info(
-                                                "Stock release completed for orderId={}", orderId))
-                        .doOnError(
-                                e -> logger.error("Unexpected error in releaseStock consumer", e))
+                                            .doOnSuccess(
+                                                    v ->
+                                                            logger.info(
+                                                                    "Stock release completed for orderId={}",
+                                                                    message.orderId()))
+                                            .onErrorResume(
+                                                    e -> {
+                                                        logger.error(
+                                                                "Failed to release stock for orderId={}",
+                                                                message.orderId(),
+                                                                e);
+                                                        return Mono.empty();
+                                                    });
+                                },
+                                8)
                         .subscribe();
     }
 

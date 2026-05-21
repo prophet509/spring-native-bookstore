@@ -46,7 +46,7 @@ public class ProcessInventoryDecisionService implements ProcessInventoryDecision
                 .flatMap(
                         order -> {
                             if (order.status() != OrderStatus.PENDING) {
-                                log.debug(
+                                log.info(
                                         "Order already processed, ignoring duplicate orderId={} currentStatus={}",
                                         orderId,
                                         order.status());
@@ -57,7 +57,11 @@ public class ProcessInventoryDecisionService implements ProcessInventoryDecision
                                 case RESERVED -> orderCommandPort
                                         .save(order.accept())
                                         .doOnSuccess(
-                                                o -> log.info("Order accepted orderId={}", orderId))
+                                                o ->
+                                                        log.info(
+                                                                "Order accepted orderId={} status={}",
+                                                                orderId,
+                                                                o.status()))
                                         .flatMap(orderEventPublisherPort::publishOrderAccepted)
                                         .then();
                                 case REJECTED -> orderCommandPort

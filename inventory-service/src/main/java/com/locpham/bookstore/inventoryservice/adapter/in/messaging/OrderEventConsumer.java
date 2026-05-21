@@ -40,6 +40,18 @@ public class OrderEventConsumer {
                                 request ->
                                         reserveStockUseCase
                                                 .reserveForOrder(request)
+                                                .doOnSubscribe(
+                                                        subscription ->
+                                                                logger.info(
+                                                                        "Reservation processing started orderId={} items={}",
+                                                                        request.orderId(),
+                                                                        request.items().size()))
+                                                .doOnSuccess(
+                                                        decision ->
+                                                                logger.info(
+                                                                        "Reservation processing completed orderId={} status={}",
+                                                                        decision.orderId(),
+                                                                        decision.status()))
                                                 .retryWhen(OPTIMISTIC_LOCK_RETRY)
                                                 .doOnError(
                                                         OptimisticLockingFailureException.class,

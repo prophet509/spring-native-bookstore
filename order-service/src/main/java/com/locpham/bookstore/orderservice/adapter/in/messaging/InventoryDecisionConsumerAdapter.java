@@ -18,7 +18,7 @@ public class InventoryDecisionConsumerAdapter {
     public Consumer<Flux<InventoryDecisionMessage>> handleInventoryDecision(
             ProcessInventoryDecisionUseCase processInventoryDecisionUseCase) {
         return flux ->
-                flux.flatMap(
+                flux.concatMap(
                                 message -> {
                                     logger.info(
                                             "Received inventory decision for order {}: {}",
@@ -27,6 +27,11 @@ public class InventoryDecisionConsumerAdapter {
                                     return processInventoryDecisionUseCase.processDecision(
                                             message.orderId(), toStatus(message.status()));
                                 })
+                        .doOnError(
+                                e ->
+                                        logger.error(
+                                                "Unexpected error in inventory decision consumer",
+                                                e))
                         .subscribe();
     }
 

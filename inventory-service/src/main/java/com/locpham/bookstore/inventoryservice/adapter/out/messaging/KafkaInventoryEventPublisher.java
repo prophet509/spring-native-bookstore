@@ -38,13 +38,16 @@ public class KafkaInventoryEventPublisher implements InventoryEventPublisher {
                                     decision.reason());
                     boolean sent = streamBridge.send("inventoryDecision-out-0", message);
                     if (sent) {
-                        logger.debug(
+                        logger.info(
                                 "Inventory decision published successfully orderId={}",
                                 decision.orderId());
                     } else {
                         logger.error(
                                 "Failed to publish inventory decision orderId={}",
                                 decision.orderId());
+                        throw new IllegalStateException(
+                                "Failed to publish inventory decision for orderId="
+                                        + decision.orderId());
                     }
                 });
     }

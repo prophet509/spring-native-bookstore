@@ -11,7 +11,6 @@ import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -32,7 +31,6 @@ public class SubmitOrderService implements SubmitOrderUseCase {
         this.eventPublisher = eventPublisher;
     }
 
-    @Transactional
     @Override
     public Mono<Order> submitOrder(SubmitOrderCommand command) {
         log.debug(
@@ -47,23 +45,24 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                         Mono.just(
                                 buildRejectedOrder(
                                         command.isbn(), command.quantity(), command.createdBy())))
-                .flatMap(orderCommandPort::save)
-                .doOnNext(
+                .flatMap(
                         order -> {
-                            if (order.status() == OrderStatus.PENDING) {
+                            log.info(
+                                    "Persisting order isbn={} quantity={} status={} user={}",
+                                    command.isbn(),
+                                    command.quantity(),
+                                    order.status(),
+                                    command.createdBy());
+                            return orderCommandPort.save(order);
+                        })
+                .doOnNext(
+                        order ->
                                 log.info(
-                                        "Order submitted orderId={} isbn={} status=PENDING",
-                                        order.id(),
-                                        command.isbn());
-                                eventPublisher.publishOrderCreated(order).subscribe();
-                            } else {
-                                log.info(
-                                        "Order rejected orderId={} isbn={} status={}",
+                                        "Order persisted orderId={} isbn={} status={}",
                                         order.id(),
                                         command.isbn(),
-                                        order.status());
-                            }
-                        })
+                                        order.status()))
+                .flatMap(order -> publishOrderCreatedIfPending(order, command.isbn()))
                 .doOnError(
                         e ->
                                 log.error(
@@ -75,6 +74,36 @@ public class SubmitOrderService implements SubmitOrderUseCase {
 
     private Order buildRejectedOrder(String isbn, int quantity, String createdBy) {
         return Order.createRejected(isbn, null, 0.0, quantity, createdBy);
+    }
+
+    private Mono<Order> publishOrderCreatedIfPending(Order order, String isbn) {
+        if (order.status() != OrderStatus.PENDING) {
+            log.info(
+                    "Order rejected orderId={} isbn={} status={}",
+                    order.id(),
+                    isbn,
+                    order.status());
+            return Mono.just(order);
+        }
+
+        log.info("Order submitted orderId={} isbn={} status=PENDING", order.id(), isbn);
+        log.info("Publishing order-created event orderId={} isbn={}", order.id(), isbn);
+        return eventPublisher
+                .publishOrderCreated(order)
+                .doOnSuccess(
+                        unused ->
+                                log.info(
+                                        "Published order-created event orderId={} isbn={}",
+                                        order.id(),
+                                        isbn))
+                .doOnError(
+                        e ->
+                                log.error(
+                                        "Failed to publish order-created event orderId={} isbn={}",
+                                        order.id(),
+                                        isbn,
+                                        e))
+                .thenReturn(order);
     }
 
     private Order buildPendingOrder(BookSnapshot book, int quantity, String createdBy) {

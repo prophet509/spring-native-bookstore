@@ -1,5 +1,6 @@
 package com.locpham.bookstore.orderservice.bootstrap.config;
 
+import io.micrometer.observation.ObservationRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
@@ -15,7 +16,7 @@ import reactor.netty.http.client.HttpClient;
 public class WebClientConfig {
 
     @Bean
-    public WebClient.Builder webClientBuilder() {
+    public WebClient.Builder webClientBuilder(ObservationRegistry observationRegistry) {
         HttpClient httpClient =
                 HttpClient.create()
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
@@ -29,6 +30,8 @@ public class WebClientConfig {
                                                         new WriteTimeoutHandler(
                                                                 10, TimeUnit.SECONDS)));
 
-        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient));
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .observationRegistry(observationRegistry);
     }
 }

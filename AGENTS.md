@@ -1,145 +1,78 @@
 # AGENTS
 
 ## Mission
-- Build and operate Spring bookstore services (`catalog-service`, `order-service`, `config-service`) with deterministic local and CI behavior.
-- Favor correctness, reproducibility, and incremental changes over clever shortcuts.
-- Keep runtime config centralized through Config Server and `config/` to avoid drift.
-- Run the smallest useful verification for every change and document any skipped checks.
-- Keep this file current whenever toolchains, workflows, or service boundaries change.
+Build and operate 7 Spring Boot services with deterministic local and CI behavior. Favor correctness, incremental changes, and centralized config over shortcuts.
 
-## Repository Layout
-- `catalog-service/`: REST catalog API, Spring MVC + Spring Data JDBC + Flyway.
-- `order-service/`: reactive order API, Spring WebFlux + Spring Data R2DBC + Flyway.
-- `config-service/`: Spring Cloud Config Server.
-- `config/`: config data consumed by Config Server (per service/profile YAML files).
-- `polar-deployment/docker/`: Docker Compose stack.
-- `polar-deployment/kubernetes/local/`: local Kubernetes manifests (currently Postgres only).
-- No monorepo Gradle root build; each service is a standalone Gradle project with its own `./gradlew`.
+## Services (all Spring Boot 4.0.3, Java 21, Gradle toolchains)
+| Service | Port | Tech | Notes |
+|---------|------|------|-------|
+| `config-service` | 8888 | Spring Cloud Config Server | Serves `config/*.yml`; native profile |
+| `edge-service` | 9000 | Spring Cloud Gateway + Redis | Routes, rate limiting, circuit breaker, OAuth2 client |
+| `catalog-service` | 9001 | Spring MVC + Data JDBC + Flyway | PostgreSQL `5432/polardb_catalog` |
+| `order-service` | 9002 | Spring WebFlux + Data R2DBC + Flyway + jOOQ | PostgreSQL `5433/polardb_order` |
+| `dispatcher-service` | 9003 | Spring Cloud Function + Stream (Kafka) | No DB; pure event consumer/producer |
+| `inventory-service` | 9004 | Spring WebFlux + Data R2DBC + Flyway + jOOQ | PostgreSQL `5434/polardb_inventory` |
+| `search-service` | 9005 | Spring WebFlux + Data Elasticsearch | Kafka event consumer; SB `4.0.6`, SC `2025.1.1` |
 
-## Runtime and Configuration
-- Service defaults: config-service `8888`, catalog `9001`, order `9002`.
-- `catalog-service` and `order-service` import config from `http://localhost:8888`.
-- Local DB defaults:
-  - catalog: `jdbc:postgresql://localhost:5432/polardb_catalog`
-  - order: `r2dbc:postgresql://localhost:5433/polardb_order`
-- Prefer editing `config/*.yml` for shared runtime behavior instead of hardcoding service-local values.
-- Never commit real secrets; use environment variables and keep `.env*` ignored.
+- No monorepo root — each service has its own `./gradlew` in its directory.
+- Most services follow Hexagonal Architecture: `adapter/` (in/out), `application/` (port/service), `domain/`.
+- `gradle/observability.gradle` shared by all services (sets `otelLogbackAppenderVersion`).
+- Config Server serves `config/` directory; services import config from `http://localhost:8888`.
+- Prefer editing `config/*.yml` for shared runtime behavior; never hardcode service-local values that change across environments.
 
-## Toolchain and Versions
-- Java 21 via Gradle toolchains.
-- Spring Boot `4.0.3` across all services.
-- Spring Cloud BOM `2025.1.0`.
-- Testcontainers BOM `1.19.7` in services that run container-backed tests.
-- Spotless `6.25.0` is enabled in `catalog-service` and `order-service`.
+## Infrastructure
+All infra via Docker Compose (`polar-deployment/docker/docker-compose.yml`) or K8s manifests (`polar-deployment/kubernetes/local/`):
+- Kafka (port `9092`), PostgreSQL per service, Keycloak (`8080`), Redis (`6379`)
+- Observability: Prometheus, Grafana, Tempo, Loki, Fluent Bit
+- Tilt at root delegates to `polar-deployment/kubernetes/local/Tiltfile`
 
-## Build and Run Commands
-- Per-service builds:
-  - `cd catalog-service && ./gradlew clean build`
-  - `cd order-service && ./gradlew clean build`
-  - `cd config-service && ./gradlew clean build`
-- Per-service run:
-  - `cd config-service && ./gradlew bootRun`
-  - `cd catalog-service && ./gradlew bootRun`
-  - `cd order-service && ./gradlew bootRun`
-- Root Makefile shortcuts:
-  - `make build`, `make test`, `make clean`
-  - `make run-config`, `make run-catalog`, `make run-order`
-  - `make infra-up`, `make infra-down`, `make compose-up`, `make compose-down`
-  - `make k8s-up`, `make k8s-down`, `make k8s-status`
-  - `make skaffold-dev|skaffold-run|skaffold-delete` (requires `skaffold.yml`)
+## Commands
+```bash
+make build                  # All 7
+make test                   # All 7
+make build-<service>        # make build-catalog
+make test-<service>         # make test-order
+make run-<service>          # make run-config (starts config-service first)
+make infra-up               # Docker Compose infra (Kafka, Postgres, Keycloak, etc.)
+make compose-up             # infra + services + frontend
+make cluster-create         # kind cluster + ingress-nginx; use `platform-up` for backing services
+```
+All make targets for `config|catalog|order|edge|inventory|dispatcher|search`.
 
-## Testing Strategy
-- Use JUnit 5 and Spring test slices where possible; reserve full `@SpringBootTest` for cross-layer behavior.
-- Keep tests deterministic and isolated by profile.
-- Catalog tests may use JDBC Testcontainers profile (`integration`) and require Docker.
-- Order tests may use R2DBC/Testcontainers stack and require Docker.
-- For single tests, run from the target service directory using `./gradlew test --tests 'package.ClassName[.method]'`.
+## Run Order
+1. `make infra-up` (or `compose-up` to also start app containers)
+2. `make run-config` (Config Server must be available before other services)
+3. `make run-edge` `make run-catalog` `make run-order` `make run-dispatcher` `make run-inventory` `make run-search`
 
-## Formatting and Style
-- Run Spotless where configured:
-  - `cd catalog-service && ./gradlew spotlessApply spotlessCheck`
-  - `cd order-service && ./gradlew spotlessApply spotlessCheck`
-- `config-service` has no Spotless plugin yet; keep style consistent with existing code.
-- Prefer constructor injection, explicit imports, and thin controllers with domain logic in `domain`.
+## Testing
+- JUnit 5 with Spring test slices preferred over `@SpringBootTest`.
+- Tests using Testcontainers require Docker. Affected services: catalog, order, inventory (Postgres + Kafka), search (Elasticsearch + Kafka), edge (Keycloak).
+- Single test: `cd <service> && ./gradlew test --tests 'com.locpham.bookstore.<service>.<TestClass>[.<method>]'`
+- Order-service and inventory-service set `systemProperty 'user.timezone', 'UTC'` in test task.
 
-## API and Layer Conventions
-- Controllers live in `web` packages and use REST resource naming (e.g., `/books`, `/orders`).
-- Keep business rules in service/domain layer; controllers orchestrate request/response mapping.
-- Use dedicated exception handling via `@RestControllerAdvice` where present.
-- Keep validation with Jakarta Bean Validation annotations close to request/domain models.
+## Formatting (Spotless)
+**All 7 services** use `spotless { java { googleJavaFormat('1.17.0').aosp() } }`:
+```bash
+make spotless-apply   # or: cd <service> && ./gradlew spotlessApply
+make spotless         # or: cd <service> && ./gradlew spotlessCheck
+```
+order-service and inventory-service exclude `src/main/generated-jooq/`.
 
-## Persistence Conventions
-- Catalog uses Spring Data JDBC; Flyway migrations under `catalog-service/src/main/resources/db/migration`.
-- Order uses Spring Data R2DBC and Flyway; keep schema evolution incremental and versioned.
-- Add migrations as `V<next>__description.sql`; do not edit historical migration files.
+## jOOQ Codegen
+order-service and inventory-service use jOOQ + Flyway. After changing a Flyway migration:
+```bash
+cd order-service && ./gradlew generateJooq    # depends on flywayMigrate
+cd inventory-service && ./gradlew generateJooq
+```
+Generated sources go to `src/main/generated-jooq/`. Committed to repo. Re-run after migration changes or schema updates.
 
-## CI/CD Expectations
-- Workflows live in `.github/workflows/`:
-  - `ci-config-pipeline.yml`
-  - `ci-catalog-pipeline.yml`
-  - `ci-order-pipeline.yml`
-  - `ci-bookstore.yml` (orchestrator on `main` pushes)
-- Keep local commands aligned with CI steps (`./gradlew build`, image packaging via `bootBuildImage`).
+## CI/CD
+- `.github/workflows/` has 7 per-service pipelines + `ci-bookstore.yml` (aggregator on `main` pushes).
+- Each pipeline: `build` (compile+test) → `package` (`bootBuildImage --publishImage` with registry credentials).
+- Image name pattern: `pxloc97/<service-name>:0.0.1-SNAPSHOT`.
 
-## Git and Agent Workflow
-- Do not revert or rewrite unrelated user changes.
-- Avoid destructive Git commands unless explicitly requested.
-- Before commit/PR, run relevant tests and formatting checks for touched services.
-- In commit/PR notes, mention:
-  - touched service(s)
-  - executed checks
-  - whether Docker/Testcontainers tests were run
-- Keep this document concise and accurate; prune outdated rules when adding new ones.
-
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
-
-This project is indexed by GitNexus as **spring-native-bookstore** (2146 symbols, 3624 relationships, 65 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
-
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/spring-native-bookstore/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/spring-native-bookstore/clusters` | All functional areas |
-| `gitnexus://repo/spring-native-bookstore/processes` | All execution flows |
-| `gitnexus://repo/spring-native-bookstore/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
-
-
-<claude-mem-context>
-# Memory Context
-
-# [spring-native-bookstore] recent context, 2026-05-10 3:32pm GMT+7
-
-No previous sessions found.
-</claude-mem-context>
+## Key Quirks
+- search-service uses Spring Boot `4.0.6` / Spring Cloud `2025.1.1` (others: `4.0.3` / `2025.1.0`).
+- Never edit historical Flyway migrations (`V<next>__description.sql` only).
+- Never commit `.env*` files or real secrets.
+- GitNexus MCP usage guide is in `CLAUDE.md`.

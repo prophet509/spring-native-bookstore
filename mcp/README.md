@@ -24,20 +24,25 @@ Start dependencies with `make compose-up` or `make infra-up` before using the se
 
 ## Code Intelligence MCP Servers
 
-- `gitnexus`: runs `npx -y gitnexus mcp` and exposes indexed repository graph tools such as `gitnexus_query`, `gitnexus_context`, `gitnexus_impact`, `gitnexus_rename`, and `gitnexus_detect_changes`.
+- `codegraph`: runs `codegraph serve --mcp` and exposes indexed knowledge graph tools such as `codegraph_context`, `codegraph_trace`, `codegraph_explore`, `codegraph_search`, `codegraph_callers`, `codegraph_callees`, `codegraph_impact`, and `codegraph_node`.
 - `java-lsp`: runs `npx -y lsp-mcp-server` and exposes semantic Java navigation/refactoring tools through a Java language server.
 - `java-app-modernization`: runs Microsoft's `@microsoft/github-copilot-app-modernization-mcp-server` for Java upgrade and modernization analysis. Telemetry is disabled with `APPMOD_MCP_COLLECT_TELEMETRY=false`.
 
 ## Java LSP Prerequisite
 
-The `java-lsp` MCP entry expects a Java language server executable named `jls` on `PATH`. If it is not installed, GitNexus remains the primary code intelligence tool and the LSP server will fail to start until `jls` is available.
+The `java-lsp` MCP entry expects a Java language server executable named `jls` on `PATH`. If it is not installed, CodeGraph remains the primary code intelligence tool and the LSP server will fail to start until `jls` is available.
 
-Use `gitnexus` first for repository-wide architecture, impact, callers/callees, and execution flows. Use `java-lsp` for precise editor-like symbol navigation, diagnostics, rename previews, and local Java refactorings.
+Use `codegraph` first for repository-wide architecture, impact, callers/callees, and execution traces. Use `java-lsp` for precise editor-like symbol navigation, diagnostics, rename previews, and local Java refactorings.
+
+## Broker & Search MCP Servers
+
+- `bookstore-kafka`: runs `uvx mcp-kafka` and exposes 12 Kafka tools: list/describe/create topics, consume/produce messages, consumer group management, cluster info, broker listing, watermarks. Write operations disabled by default (read-only safe mode). Connects to `localhost:9092`.
+- `bookstore-elasticsearch`: runs `uvx elasticsearch-mcp-server-es9` and exposes Elasticsearch 9.x tools: list indices, get mappings, search documents, execute ES|QL, get shards. Connects to `http://localhost:9200` (no auth in local dev).
 
 ## Research Notes
 
 - Bruno stores collections as version-controlled plain-text `.bru` files. This repo uses `bruno/bookstore` with a `Local` environment.
-- GitNexus exposes stdio MCP via `npx -y gitnexus mcp`.
+- CodeGraph exposes stdio MCP via `codegraph serve --mcp`.
 - Java semantic tooling is provided through `lsp-mcp-server`; the project config lives in `mcp/lsp-mcp.json`.
 - Java modernization tooling is provided through `@microsoft/github-copilot-app-modernization-mcp-server`.
 - Postgres uses `crystaldba/postgres-mcp` via `uvx postgres-mcp`; access mode is `restricted` by default for safer read-only database inspection.

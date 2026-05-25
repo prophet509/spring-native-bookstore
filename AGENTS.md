@@ -75,4 +75,4 @@ Generated sources go to `src/main/generated-jooq/`. Committed to repo. Re-run af
 - search-service uses Spring Boot `4.0.6` / Spring Cloud `2025.1.1` (others: `4.0.3` / `2025.1.0`).
 - Never edit historical Flyway migrations (`V<next>__description.sql` only).
 - Never commit `.env*` files or real secrets.
-- GitNexus MCP usage guide is in `CLAUDE.md`.
+- CodeGraph MCP usage guide is in `CLAUDE.md`.

@@ -4,30 +4,97 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      config: ${{ steps.filter.outputs.config }}
+      catalog: ${{ steps.filter.outputs.catalog }}
+      order: ${{ steps.filter.outputs.order }}
+      edge: ${{ steps.filter.outputs.edge }}
+      dispatcher: ${{ steps.filter.outputs.dispatcher }}
+      inventory: ${{ steps.filter.outputs.inventory }}
+      search: ${{ steps.filter.outputs.search }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            config:
+              - 'config-service/**'
+              - 'config/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+            catalog:
+              - 'catalog-service/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+            order:
+              - 'order-service/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+            edge:
+              - 'edge-service/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+            dispatcher:
+              - 'dispatcher-service/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+            inventory:
+              - 'inventory-service/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+            search:
+              - 'search-service/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - '.github/workflows/**'
+
   config-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.config == 'true' }}
     uses: ./.github/workflows/ci-config-pipeline.yml
     secrets: inherit
 
   catalog-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.catalog == 'true' }}
     uses: ./.github/workflows/ci-catalog-pipeline.yml
     secrets: inherit
 
   order-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.order == 'true' }}
     uses: ./.github/workflows/ci-order-pipeline.yml
     secrets: inherit
 
   edge-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.edge == 'true' }}
     uses: ./.github/workflows/ci-edge-pipeline.yml
     secrets: inherit
 
   dispatcher-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.dispatcher == 'true' }}
     uses: ./.github/workflows/ci-dispatcher-pipeline.yml
     secrets: inherit
 
   inventory-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.inventory == 'true' }}
     uses: ./.github/workflows/ci-inventory-pipeline.yml
     secrets: inherit
 
   search-service-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.search == 'true' }}
     uses: ./.github/workflows/ci-search-pipeline.yml
     secrets: inherit

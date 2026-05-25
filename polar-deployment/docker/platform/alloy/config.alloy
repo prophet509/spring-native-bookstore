@@ -11,16 +11,6 @@ otelcol.receiver.otlp "default" {
     endpoint = "0.0.0.0:4318"
   }
   output {
-    metrics = [otelcol.processor.memory_limiter.default.input]
-    traces  = [otelcol.processor.memory_limiter.default.input]
-    logs    = [otelcol.processor.memory_limiter.default.input]
-  }
-}
-
-otelcol.processor.memory_limiter "default" {
-  check_interval = "1s"
-  limit_mib      = 512
-  output {
     metrics = [otelcol.processor.batch.default.input]
     traces  = [otelcol.processor.batch.default.input]
     logs    = [otelcol.processor.batch.default.input]
@@ -34,14 +24,6 @@ otelcol.processor.batch "default" {
     logs    = [otelcol.exporter.loki.default.input]
   }
 }
-  check_interval = "1s"
-  limit_mib      = 512
-  output {
-    metrics = [otelcol.processor.batch.default.input]
-    traces  = [otelcol.processor.batch.default.input]
-    logs    = [otelcol.processor.batch.default.input]
-  }
-}
 
 otelcol.exporter.otlp "tempo" {
   client {
@@ -49,16 +31,6 @@ otelcol.exporter.otlp "tempo" {
     tls {
       insecure = true
     }
-    retry {
-      enabled         = true
-      initial_interval = "5s"
-      max_elapsed_time = "30s"
-    }
-  }
-  sending_queue {
-    enabled      = true
-    num_consumers = 10
-    queue_size    = 1000
   }
 }
 
@@ -70,11 +42,6 @@ loki.write "default" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
   }
-  retry {
-    enabled         = true
-    initial_interval = "5s"
-    max_elapsed_time = "30s"
-  }
 }
 
 otelcol.exporter.prometheus "default" {
@@ -84,15 +51,5 @@ otelcol.exporter.prometheus "default" {
 prometheus.remote_write "default" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
-  }
-  retry {
-    enabled         = true
-    initial_interval = "5s"
-    max_elapsed_time = "30s"
-  }
-  sending_queue {
-    enabled      = true
-    num_consumers = 10
-    queue_size    = 1000
   }
 }

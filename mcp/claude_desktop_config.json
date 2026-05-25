@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "gitnexus": {
-      "command": "npx",
-      "args": ["-y", "gitnexus", "mcp"]
+    "codegraph": {
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
     },
     "java-lsp": {
       "command": "npx",
@@ -55,6 +55,20 @@
         "KEYCLOAK_URL": "http://localhost:8080",
         "KEYCLOAK_ADMIN": "user",
         "KEYCLOAK_ADMIN_PASSWORD": "password"
+      }
+    },
+    "bookstore-kafka": {
+      "command": "uvx",
+      "args": ["mcp-kafka"],
+      "env": {
+        "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092"
+      }
+    },
+    "bookstore-elasticsearch": {
+      "command": "uvx",
+      "args": ["elasticsearch-mcp-server-es9"],
+      "env": {
+        "ELASTICSEARCH_HOSTS": "http://localhost:9200"
       }
     }
   }

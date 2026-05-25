@@ -59,6 +59,6 @@ datasources:
     jsonData:
       derivedFields:
         - datasourceUid: tempo-pxloc-vitale
-          matcherRegex: \[.+,(.+?),
+          matcherRegex: '"traceId":"([^"]+)"'
           name: TraceID
           url: $${__value.raw}

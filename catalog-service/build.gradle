@@ -5,6 +5,8 @@ plugins {
     id 'com.diffplug.spotless' version '6.25.0'
 }
 
+apply from: '../gradle/observability.gradle'
+
 group = 'com.locpham.bookstore'
 version = '0.0.1-SNAPSHOT'
 description = 'catalog-service'
@@ -47,7 +49,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-    runtimeOnly "io.opentelemetry.javaagent:opentelemetry-javaagent:${otelAgentVersion}"
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:${otelLogbackAppenderVersion}"
     runtimeOnly 'org.postgresql:postgresql'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'

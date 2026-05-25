@@ -46,7 +46,7 @@ public class BookController {
 
     @GetMapping("{isbn}")
     public BookResponse getByIsbn(@PathVariable String isbn) {
-        log.info("Fetching book details for isbn={}", isbn);
+        log.atInfo().addKeyValue("isbn", isbn).log("Fetching book details");
         var book = viewBookDetailUseCase.viewBookDetail(isbn);
         return BookResponse.fromDomain(book);
     }
@@ -55,7 +55,7 @@ public class BookController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('employee')")
     public BookResponse post(@Valid @RequestBody BookRequest request) {
-        log.info("Adding book to catalog: {}", request);
+        log.atInfo().addKeyValue("isbn", request.isbn()).log("Adding book to catalog: {}", request);
         var book = addBookUseCase.addBookToCatalog(request.toDomain());
         return BookResponse.fromDomain(book);
     }
@@ -64,15 +64,14 @@ public class BookController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('employee')")
     public void delete(@PathVariable String isbn) {
-        log.info("Deleting book from catalog: {}", isbn);
-
+        log.atInfo().addKeyValue("isbn", isbn).log("Deleting book from catalog");
         editBookUseCase.deleteBook(isbn);
     }
 
     @PutMapping("{isbn}")
     @PreAuthorize("hasRole('employee')")
     public BookResponse put(@PathVariable String isbn, @Valid @RequestBody BookRequest request) {
-        log.info("Updating book details for isbn={}: {}", isbn, request);
+        log.atInfo().addKeyValue("isbn", isbn).log("Updating book details: {}", request);
         var book = editBookUseCase.editBookDetails(request.toDomain());
         return BookResponse.fromDomain(book);
     }

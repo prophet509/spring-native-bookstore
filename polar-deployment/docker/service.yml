@@ -10,19 +10,13 @@ services:
       - BPL_DEBUG_PORT=8001
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=catalog-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
+      - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
       - SPRING_DATASOURCE_URL=jdbc:postgresql://polar-postgres-catalog:5432/polardb_catalog
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://host.docker.internal:8080/realms/PolarBookshop
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "catalog-service"
     networks:
       - polar-network
 
@@ -37,21 +31,15 @@ services:
       - BPL_DEBUG_PORT=8002
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=order-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
+      - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
       - SPRING_R2DBC_URL=r2dbc:postgresql://polar-postgres-order:5432/polardb_order
       - SPRING_FLYWAY_URL=jdbc:postgresql://polar-postgres-order:5432/polardb_order
       - POLAR_CATALOG_SERVICE_URL=http://catalog-service:9001
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://host.docker.internal:8080/realms/PolarBookshop
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "order-service"
     networks:
       - polar-network
 
@@ -66,19 +54,13 @@ services:
       - BPL_DEBUG_PORT=8005
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=inventory-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
+      - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
       - SPRING_R2DBC_URL=r2dbc:postgresql://polar-postgres-inventory:5432/polardb_inventory
       - SPRING_FLYWAY_URL=jdbc:postgresql://polar-postgres-inventory:5432/polardb_inventory
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "inventory-service"
     networks:
       - polar-network
 
@@ -93,18 +75,11 @@ services:
       - BPL_DEBUG_PORT=8003
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=dispatcher-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "dispatcher-service"
     networks:
       - polar-network
 
@@ -119,18 +94,12 @@ services:
       - BPL_DEBUG_PORT=8006
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=search-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
+      - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
       - SPRING_ELASTICSEARCH_URIS=http://polar-elasticsearch:9200
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "search-service"
     networks:
       - polar-network
 
@@ -145,10 +114,8 @@ services:
       - BPL_DEBUG_PORT=8000
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=edge-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://user:password@config-service:8888
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
@@ -158,11 +125,6 @@ services:
       - SEARCH_SERVICE_URL=http://search-service:9005
       - SPA_URL=http://polar-ui:9004
       - KEYCLOAK_URL=http://host.docker.internal:8080
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "edge-service"
     networks:
       - polar-network
 

@@ -1,7 +1,7 @@
 services:
   config-service:
     depends_on:
-      - fluent-bit
+      - grafana-alloy
       - tempo
       - polar-kafka
     image: "pxloc97/config-service:0.0.1-SNAPSHOT"
@@ -10,25 +10,18 @@ services:
       - 8888:8888
       - 9888:9888
     environment:
-      - SPRING_PROFILES_ACTIVE=native
+      - SPRING_PROFILES_ACTIVE=native,prod
       - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS=file:/workspace/config
       - BPL_DEBUG_ENABLED=true
       - BPL_DEBUG_PORT=9888
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
-      - JAVA_TOOL_OPTIONS=-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar
       - OTEL_SERVICE_NAME=config-service
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
-      - OTEL_METRICS_EXPORTER=none
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
       - ENCRYPT_KEY=sharedkey
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
     volumes:
       - ../../config:/workspace/config:ro
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: 127.0.0.1:24224
-        tag: "config-service"
     networks:
       - polar-network
 
@@ -158,28 +151,34 @@ services:
   loki:
     image: grafana/loki:2.9.8
     container_name: loki
-    depends_on:
-      - fluent-bit
     ports:
       - "3100:3100"
     networks:
       - polar-network
 
-  fluent-bit:
-    image: grafana/fluent-bit-plugin-loki:main
-    container_name: fluent-bit
+  grafana-alloy:
+    image: grafana/alloy:v1.1.0
+    container_name: grafana-alloy
+    depends_on:
+      - loki
+      - tempo
+      - prometheus
     ports:
-      - "24224:24224"
-    environment:
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - "12345:12345"
+      - "4317:4317"
+      - "4318:4318"
     volumes:
-      - ./platform/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./platform/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    command: run --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     networks:
       - polar-network
 
   prometheus:
     image: quay.io/prometheus/prometheus:v2.52.0
     container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-remote-write-receiver'
     ports:
       - "9090:9090"
     volumes:

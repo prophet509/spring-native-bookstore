@@ -33,11 +33,11 @@ public class SubmitOrderService implements SubmitOrderUseCase {
 
     @Override
     public Mono<Order> submitOrder(SubmitOrderCommand command) {
-        log.debug(
-                "Submitting order isbn={} quantity={} user={}",
-                command.isbn(),
-                command.quantity(),
-                command.createdBy());
+        log.atDebug()
+                .addKeyValue("isbn", command.isbn())
+                .addKeyValue("quantity", command.quantity())
+                .addKeyValue("createdBy", command.createdBy())
+                .log("Submitting order");
         return catalogBookPort
                 .loadBook(command.isbn())
                 .map(book -> buildPendingOrder(book, command.quantity(), command.createdBy()))
@@ -47,29 +47,28 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                                         command.isbn(), command.quantity(), command.createdBy())))
                 .flatMap(
                         order -> {
-                            log.info(
-                                    "Persisting order isbn={} quantity={} status={} user={}",
-                                    command.isbn(),
-                                    command.quantity(),
-                                    order.status(),
-                                    command.createdBy());
+                            log.atInfo()
+                                    .addKeyValue("isbn", command.isbn())
+                                    .addKeyValue("quantity", command.quantity())
+                                    .addKeyValue("status", order.status())
+                                    .addKeyValue("createdBy", command.createdBy())
+                                    .log("Persisting order");
                             return orderCommandPort.save(order);
                         })
                 .doOnNext(
                         order ->
-                                log.info(
-                                        "Order persisted orderId={} isbn={} status={}",
-                                        order.id(),
-                                        command.isbn(),
-                                        order.status()))
+                                log.atInfo()
+                                        .addKeyValue("orderId", order.id())
+                                        .addKeyValue("isbn", command.isbn())
+                                        .addKeyValue("status", order.status())
+                                        .log("Order persisted"))
                 .flatMap(order -> publishOrderCreatedIfPending(order, command.isbn()))
                 .doOnError(
                         e ->
-                                log.error(
-                                        "Failed to submit order isbn={} error={}",
-                                        command.isbn(),
-                                        e.getMessage(),
-                                        e));
+                                log.atError()
+                                        .addKeyValue("isbn", command.isbn())
+                                        .setCause(e)
+                                        .log("Failed to submit order"));
     }
 
     private Order buildRejectedOrder(String isbn, int quantity, String createdBy) {
@@ -78,31 +77,38 @@ public class SubmitOrderService implements SubmitOrderUseCase {
 
     private Mono<Order> publishOrderCreatedIfPending(Order order, String isbn) {
         if (order.status() != OrderStatus.PENDING) {
-            log.info(
-                    "Order rejected orderId={} isbn={} status={}",
-                    order.id(),
-                    isbn,
-                    order.status());
+            log.atInfo()
+                    .addKeyValue("orderId", order.id())
+                    .addKeyValue("isbn", isbn)
+                    .addKeyValue("status", order.status())
+                    .log("Order rejected");
             return Mono.just(order);
         }
 
-        log.info("Order submitted orderId={} isbn={} status=PENDING", order.id(), isbn);
-        log.info("Publishing order-created event orderId={} isbn={}", order.id(), isbn);
+        log.atInfo()
+                .addKeyValue("orderId", order.id())
+                .addKeyValue("isbn", isbn)
+                .addKeyValue("status", "PENDING")
+                .log("Order submitted");
+        log.atInfo()
+                .addKeyValue("orderId", order.id())
+                .addKeyValue("isbn", isbn)
+                .log("Publishing order-created event");
         return eventPublisher
                 .publishOrderCreated(order)
                 .doOnSuccess(
                         unused ->
-                                log.info(
-                                        "Published order-created event orderId={} isbn={}",
-                                        order.id(),
-                                        isbn))
+                                log.atInfo()
+                                        .addKeyValue("orderId", order.id())
+                                        .addKeyValue("isbn", isbn)
+                                        .log("Published order-created event"))
                 .doOnError(
                         e ->
-                                log.error(
-                                        "Failed to publish order-created event orderId={} isbn={}",
-                                        order.id(),
-                                        isbn,
-                                        e))
+                                log.atError()
+                                        .addKeyValue("orderId", order.id())
+                                        .addKeyValue("isbn", isbn)
+                                        .setCause(e)
+                                        .log("Failed to publish order-created event"))
                 .thenReturn(order);
     }
 

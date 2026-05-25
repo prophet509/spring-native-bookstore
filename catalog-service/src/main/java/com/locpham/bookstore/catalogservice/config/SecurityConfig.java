@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -18,7 +19,9 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(
-            HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter)
+            HttpSecurity http,
+            JwtAuthenticationConverter jwtAuthenticationConverter,
+            MdcRequestFilter mdcRequestFilter)
             throws Exception {
         return http.authorizeHttpRequests(
                         authorize ->
@@ -35,12 +38,18 @@ public class SecurityConfig {
                                         jwt ->
                                                 jwt.jwtAuthenticationConverter(
                                                         jwtAuthenticationConverter)))
+                .addFilterAfter(mdcRequestFilter, BearerTokenAuthenticationFilter.class)
                 .sessionManagement(
                         sessionManagement ->
                                 sessionManagement.sessionCreationPolicy(
                                         SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
                 .build();
+    }
+
+    @Bean
+    MdcRequestFilter mdcRequestFilter() {
+        return new MdcRequestFilter();
     }
 
     @Bean

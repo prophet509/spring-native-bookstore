@@ -14,6 +14,8 @@ plugins {
     id 'org.flywaydb.flyway' version '11.14.1'
 }
 
+apply from: '../gradle/observability.gradle'
+
 import org.gradle.api.tasks.PathSensitivity
 
 group = 'com.locpham.bookstore'
@@ -74,7 +76,10 @@ dependencies {
 
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
-    runtimeOnly "io.opentelemetry.javaagent:opentelemetry-javaagent:${otelAgentVersion}"
+    implementation 'org.springframework.boot:spring-boot-starter-opentelemetry'
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:${otelLogbackAppenderVersion}"
+    implementation 'io.micrometer:context-propagation'
     runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-aarch_64'
     runtimeOnly 'org.flywaydb:flyway-core'
     runtimeOnly 'org.postgresql:postgresql'

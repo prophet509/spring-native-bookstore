@@ -38,12 +38,14 @@ public class ReserveStockService implements ReserveStockUseCase {
         List<String> isbns =
                 request.items().stream().map(OrderItem::isbn).collect(Collectors.toList());
 
-        logger.info(
-                "Processing reservation for orderId={} items={}",
-                request.orderId(),
-                request.items().stream()
-                        .map(i -> i.isbn() + "x" + i.quantity())
-                        .collect(Collectors.joining(",")));
+        logger.atInfo()
+                .addKeyValue("orderId", request.orderId())
+                .log(
+                        () ->
+                                "Processing reservation for items: "
+                                        + request.items().stream()
+                                                .map(i -> i.isbn() + "x" + i.quantity())
+                                                .collect(Collectors.joining(",")));
 
         return reservationPort
                 .findByOrderId(request.orderId())
@@ -51,9 +53,9 @@ public class ReserveStockService implements ReserveStockUseCase {
                 .flatMap(
                         alreadyReserved -> {
                             if (alreadyReserved) {
-                                logger.info(
-                                        "Reservation already exists for orderId={} — idempotent return",
-                                        request.orderId());
+                                logger.atInfo()
+                                        .addKeyValue("orderId", request.orderId())
+                                        .log("Reservation already exists — idempotent return");
                                 return Mono.just(InventoryDecision.reserved(request.orderId()));
                             }
                             return reserveAvailableStock(request, isbns);
@@ -61,10 +63,9 @@ public class ReserveStockService implements ReserveStockUseCase {
                 .onErrorResume(
                         InsufficientStockException.class,
                         e -> {
-                            logger.warn(
-                                    "Stock reservation REJECTED for orderId={}: {}",
-                                    request.orderId(),
-                                    e.getMessage());
+                            logger.atWarn()
+                                    .addKeyValue("orderId", request.orderId())
+                                    .log(() -> "Stock reservation REJECTED: " + e.getMessage());
                             InventoryDecision rejected =
                                     InventoryDecision.rejected(request.orderId(), e.getMessage());
                             return eventPublisher
@@ -75,8 +76,9 @@ public class ReserveStockService implements ReserveStockUseCase {
 
     private Mono<InventoryDecision> reserveAvailableStock(
             OrderReserveRequest request, List<String> isbns) {
-        logger.debug(
-                "Attempting stock reservation for orderId={} isbns={}", request.orderId(), isbns);
+        logger.atDebug()
+                .addKeyValue("orderId", request.orderId())
+                .log(() -> "Attempting stock reservation for isbns: " + isbns);
         return inventoryPort
                 .findAllByIsbn(isbns)
                 .collectMap(InventoryItem::isbn)
@@ -94,12 +96,20 @@ public class ReserveStockService implements ReserveStockUseCase {
                                                                         "No inventory found for ISBN: "
                                                                                 + item.isbn());
                                                             }
-                                                            logger.debug(
-                                                                    "Reserving isbn={} requested={} available={} version={}",
-                                                                    item.isbn(),
-                                                                    item.quantity(),
-                                                                    inventory.availableQuantity(),
-                                                                    inventory.version());
+                                                            logger.atDebug()
+                                                                    .addKeyValue(
+                                                                            "isbn", item.isbn())
+                                                                    .addKeyValue(
+                                                                            "requested",
+                                                                            item.quantity())
+                                                                    .addKeyValue(
+                                                                            "available",
+                                                                            inventory
+                                                                                    .availableQuantity())
+                                                                    .addKeyValue(
+                                                                            "version",
+                                                                            inventory.version())
+                                                                    .log("Reserving inventory");
                                                             return inventory.reserve(
                                                                     item.quantity());
                                                         })
@@ -116,10 +126,16 @@ public class ReserveStockService implements ReserveStockUseCase {
                                         .collectList()
                                         .doOnSuccess(
                                                 savedItems ->
-                                                        logger.info(
-                                                                "Inventory updated for orderId={} — {} items reserved",
-                                                                request.orderId(),
-                                                                savedItems.size()))
+                                                        logger.atInfo()
+                                                                .addKeyValue(
+                                                                        "orderId",
+                                                                        request.orderId())
+                                                                .log(
+                                                                        () ->
+                                                                                "Inventory updated — "
+                                                                                        + savedItems
+                                                                                                .size()
+                                                                                        + " items reserved"))
                                         .flatMap(
                                                 savedItems -> {
                                                     List<Mono<Reservation>> reservationMonos =
@@ -146,10 +162,13 @@ public class ReserveStockService implements ReserveStockUseCase {
                                                                                                     .orderId()))
                                                             .doOnSuccess(
                                                                     decision ->
-                                                                            logger.info(
-                                                                                    "Reservation CONFIRMED for orderId={}",
-                                                                                    request
-                                                                                            .orderId()))
+                                                                            logger.atInfo()
+                                                                                    .addKeyValue(
+                                                                                            "orderId",
+                                                                                            request
+                                                                                                    .orderId())
+                                                                                    .log(
+                                                                                            "Reservation CONFIRMED"))
                                                             .flatMap(
                                                                     decision ->
                                                                             eventPublisher

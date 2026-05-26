@@ -39,7 +39,6 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:kafka'
     testImplementation 'org.testcontainers:elasticsearch'
-    testRuntimeOnly 'org.junit-platform:junit-platform-launcher'
 }
 
 dependencyManagement {

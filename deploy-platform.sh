@@ -11,19 +11,19 @@ kubectl create configmap keycloak-realm-config \
   --from-file=realm-config.json=polar-deployment/docker/keycloak/realm-config.json \
   --dry-run=client -o yaml | kubectl apply --context "$KUBE_CONTEXT" -f -
 
-kubectl create configmap observability-prometheus-config \
-  --context "$KUBE_CONTEXT" \
-  --from-file=prometheus.yml=polar-deployment/kubernetes/local/prometheus-k8s.yml \
-  --dry-run=client -o yaml | kubectl apply --context "$KUBE_CONTEXT" -f -
-
 kubectl create configmap observability-tempo-config \
   --context "$KUBE_CONTEXT" \
   --from-file=tempo.yml=polar-deployment/docker/platform/tempo/tempo.yml \
   --dry-run=client -o yaml | kubectl apply --context "$KUBE_CONTEXT" -f -
 
-kubectl create configmap observability-fluent-bit-config \
+kubectl create configmap observability-mimir-config \
   --context "$KUBE_CONTEXT" \
-  --from-file=fluent-bit.conf=polar-deployment/kubernetes/local/fluent-bit-k8s.conf \
+  --from-file=mimir.yml=polar-deployment/docker/platform/mimir/mimir.yml \
+  --dry-run=client -o yaml | kubectl apply --context "$KUBE_CONTEXT" -f -
+
+kubectl create configmap observability-alloy-config \
+  --context "$KUBE_CONTEXT" \
+  --from-file=config.alloy=polar-deployment/kubernetes/local/alloy-k8s.alloy \
   --dry-run=client -o yaml | kubectl apply --context "$KUBE_CONTEXT" -f -
 
 kubectl create configmap observability-grafana-datasources \
@@ -57,7 +57,8 @@ kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/pola
 kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/polar-redis --timeout=180s
 kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/loki --timeout=180s
 kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/tempo --timeout=180s
-kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/prometheus --timeout=180s
+kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/mimir --timeout=180s
+kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/grafana-alloy --timeout=180s
 kubectl wait --context "$KUBE_CONTEXT" --for=condition=available deployment/grafana --timeout=180s
 
 printf "\nPlatform is ready on context %s\n" "$KUBE_CONTEXT"

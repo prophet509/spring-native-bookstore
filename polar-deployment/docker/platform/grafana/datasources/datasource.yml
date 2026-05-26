@@ -2,16 +2,17 @@ apiVersion: 1
 
 deleteDatasources:
   - name: Prometheus
+  - name: Mimir
   - name: Tempo
   - name: Loki
 
 datasources:
-  - name: Prometheus
+  - name: Mimir
     type: prometheus
-    uid: prometheus-pxloc-vitale
+    uid: mimir-pxloc
     access: proxy
     orgId: 1
-    url: http://prometheus:9090
+    url: http://mimir:9009/prometheus
     basicAuth: false
     isDefault: false
     version: 1
@@ -41,7 +42,7 @@ datasources:
       lokiSearch:
         datasourceUid: 'loki-pxloc-vitale'
       serviceMap:
-        datasourceUid: 'prometheus-pxloc-vitale'
+        datasourceUid: 'mimir-pxloc'
       search:
         hide: false
       nodeGraph:

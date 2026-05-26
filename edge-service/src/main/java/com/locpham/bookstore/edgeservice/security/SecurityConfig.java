@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
@@ -25,9 +28,11 @@ import org.springframework.security.web.server.authentication.HttpStatusServerEn
 import org.springframework.security.web.server.authentication.logout.ServerLogoutSuccessHandler;
 import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository;
 import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers;
 import org.springframework.web.server.WebFilter;
 import reactor.core.publisher.Mono;
 
+@Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
@@ -63,6 +68,18 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    SecurityWebFilterChain actuatorSecurityFilterChain(ServerHttpSecurity http) {
+        return http.securityMatcher(
+                        ServerWebExchangeMatchers.pathMatchers(
+                                "/actuator/prometheus", "/actuator/health/**"))
+                .authorizeExchange(exchange -> exchange.anyExchange().permitAll())
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .build();
+    }
+
+    @Bean
+    @Order(Ordered.LOWEST_PRECEDENCE)
     SecurityWebFilterChain springSecurityFilterChain(
             ServerHttpSecurity http,
             ReactiveClientRegistrationRepository clientRegistrationRepository) {

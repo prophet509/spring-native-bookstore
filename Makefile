@@ -23,7 +23,7 @@ SKAFFOLD_FILE := skaffold.yml
 	platform-up platform-down edge-up edge-down k8s-status \
 	cluster-create cluster-delete cluster-down \
 	skaffold-dev skaffold-run skaffold-delete \
-	infra-up infra-down services-up services-down frontend-up frontend-down compose-up compose-down
+	infra-up infra-down wait-config services-up services-down frontend-up frontend-down compose-up compose-down
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nAvailable targets:\n"} /^[a-zA-Z0-9_.-%-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -123,7 +123,19 @@ infra-up: ## Start infrastructure services via Docker Compose (Kafka, Postgres, 
 infra-down: ## Stop infrastructure services via Docker Compose
 	cd polar-deployment/docker && docker compose -f docker-compose.yml down
 
-services-up: ## Start application services via Docker Compose
+wait-config: ## Wait until Config Server is ready for application services
+	@echo "Waiting for Config Server..."
+	@for i in $$(seq 1 60); do \
+		if curl -fsS http://user:password@localhost:8888/edge-service/prod >/dev/null; then \
+			echo "Config Server is ready."; \
+			exit 0; \
+		fi; \
+		sleep 2; \
+	done; \
+	echo "Config Server did not become ready in 120 seconds."; \
+	exit 1
+
+services-up: wait-config ## Start application services via Docker Compose
 	cd polar-deployment/docker && docker compose -f service.yml up -d
 
 services-down: ## Stop application services via Docker Compose

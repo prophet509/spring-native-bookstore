@@ -18,6 +18,10 @@ services:
       - BPL_JVM_THREAD_COUNT=50
       - OTEL_SERVICE_NAME=config-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
+      - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://grafana-alloy:4318/v1/traces
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://grafana-alloy:4318/v1/logs
+      - MANAGEMENT_OPENTELEMETRY_LOGGING_EXPORT_OTLP_ENDPOINT=http://grafana-alloy:4318/v1/logs
       - OTEL_METRICS_EXPORTER=none
       - ENCRYPT_KEY=sharedkey
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
@@ -135,7 +139,7 @@ services:
     container_name: grafana
     depends_on:
       - loki
-      - prometheus
+      - mimir
       - tempo
     ports:
       - "3000:3000"
@@ -157,33 +161,32 @@ services:
     networks:
       - polar-network
 
+  mimir:
+    image: grafana/mimir:2.14.3
+    container_name: mimir
+    command: ["-config.file=/etc/mimir/mimir.yml"]
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./platform/mimir/mimir.yml:/etc/mimir/mimir.yml:ro
+      - mimir_data:/data
+    networks:
+      - polar-network
+
   grafana-alloy:
     image: grafana/alloy:v1.1.0
     container_name: grafana-alloy
     depends_on:
       - loki
       - tempo
-      - prometheus
+      - mimir
     ports:
       - "12345:12345"
       - "4317:4317"
       - "4318:4318"
     volumes:
       - ./platform/alloy/config.alloy:/etc/alloy/config.alloy:ro
-    command: run --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
-    networks:
-      - polar-network
-
-  prometheus:
-    image: quay.io/prometheus/prometheus:v2.52.0
-    container_name: prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--web.enable-remote-write-receiver'
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./platform/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     networks:
       - polar-network
 
@@ -202,6 +205,8 @@ volumes:
   kafka_data:
     driver: local
   elasticsearch_data:
+    driver: local
+  mimir_data:
     driver: local
 
 networks:

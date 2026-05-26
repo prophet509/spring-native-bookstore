@@ -59,7 +59,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -110,7 +110,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "sum(spring_cloud_gateway_requests_seconds_count{job=~\"$gatewayService\"})",
@@ -125,7 +125,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -176,7 +176,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "sum(spring_cloud_gateway_requests_seconds_count{outcome=\"SUCCESSFUL\", job=~\"$gatewayService\"})",
@@ -191,7 +191,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -243,7 +243,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "sum(spring_cloud_gateway_requests_seconds_count{outcome!=\"SUCCESSFUL\", job=~\"$gatewayService\"})",
@@ -284,7 +284,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -367,7 +367,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "spring_cloud_gateway_requests_seconds_sum{routeId=~\"$routeId\", job=~\"$gatewayService\"}/spring_cloud_gateway_requests_seconds_count{routeId=~\"$routeId\", job=~\"$gatewayService\"}",
@@ -412,7 +412,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "description": "",
       "fieldConfig": {
@@ -496,7 +496,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "spring_cloud_gateway_requests_seconds_count{outcome=\"SUCCESSFUL\", routeId=~\"$routeId\", job=~\"$gatewayService\"}",
@@ -542,7 +542,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "description": "",
       "fieldConfig": {
@@ -625,7 +625,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "spring_cloud_gateway_requests_seconds_count{outcome!=\"SUCCESSFUL\", routeId=~\"$routeId\", job=~\"$gatewayService\"}",
@@ -670,7 +670,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "description": "",
       "fieldConfig": {
@@ -753,7 +753,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "sum(spring_cloud_gateway_requests_seconds_count{routeId=~\"$routeId\", job=~\"$gatewayService\"}) by (job, status)",
@@ -798,7 +798,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -879,7 +879,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "process_cpu_usage{job=~\"$gatewayService\"}",
           "format": "time_series",
@@ -896,7 +896,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -977,7 +977,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "sum(jvm_memory_used_bytes{job=~\"$gatewayService\"}) by (job, instance)",
           "format": "time_series",
@@ -994,7 +994,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -1075,7 +1075,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "exemplar": true,
           "expr": "jvm_threads_live_threads{job=~\"$gatewayService\"}",
@@ -1126,7 +1126,7 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -1207,7 +1207,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "jvm_gc_memory_promoted_bytes_total/jvm_gc_memory_allocated_bytes_total",
           "format": "time_series",
@@ -1238,7 +1238,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(spring_cloud_gateway_requests_seconds_count,job)",
         "hide": 0,
@@ -1268,7 +1268,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(spring_cloud_gateway_requests_seconds_count,routeId)",
         "hide": 0,

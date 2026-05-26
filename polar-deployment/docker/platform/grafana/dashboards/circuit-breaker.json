@@ -52,7 +52,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -111,7 +111,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "sum(resilience4j_circuitbreaker_state{state=\"closed\"})",
           "format": "time_series",
@@ -126,7 +126,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -185,7 +185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "sum(resilience4j_circuitbreaker_state{state=~\"open|forced_open\"})",
           "format": "time_series",
@@ -199,7 +199,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "description": "",
       "fieldConfig": {
@@ -286,7 +286,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "resilience4j_circuitbreaker_state{instance=~\"$instance\"}",
           "format": "time_series",
@@ -301,7 +301,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -360,7 +360,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "sum(resilience4j_circuitbreaker_state{state=\"half_open\"})",
           "format": "time_series",
@@ -403,7 +403,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "description": "",
       "fieldConfig": {
@@ -465,7 +465,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "resilience4j_circuitbreaker_failure_rate{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}",
           "format": "time_series",
@@ -482,7 +482,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -631,7 +631,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "rate(resilience4j_circuitbreaker_calls_seconds_count{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}[1m])",
           "format": "time_series",
@@ -643,7 +643,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "rate(resilience4j_circuitbreaker_calls_total{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}[1m])",
           "format": "time_series",
@@ -658,7 +658,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -775,7 +775,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "resilience4j_circuitbreaker_buffered_calls{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}",
           "format": "time_series",
@@ -786,7 +786,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "resilience4j_circuitbreaker_max_buffered_calls{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}",
           "format": "time_series",
@@ -801,7 +801,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -888,7 +888,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "histogram_quantile(0.9, sum(rate(resilience4j_circuitbreaker_calls_seconds_bucket{application=~\"$application\", instance=~\"$instance\", name=~\"$circuitbreaker_name\"}[1m])) by (le))",
           "format": "time_series",
@@ -900,7 +900,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "histogram_quantile(0.95, sum(rate(resilience4j_circuitbreaker_calls_seconds_bucket{application=~\"$application\", instance=~\"$instance\", name=~\"$circuitbreaker_name\"}[1m])) by (le))",
           "format": "time_series",
@@ -911,7 +911,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "histogram_quantile(0.98, sum(rate(resilience4j_circuitbreaker_calls_seconds_bucket{application=~\"$application\", instance=~\"$instance\", name=~\"$circuitbreaker_name\"}[1m])) by (le))",
           "format": "time_series",
@@ -922,7 +922,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "histogram_quantile(0.50, sum(rate(resilience4j_circuitbreaker_calls_seconds_bucket{application=~\"$application\", instance=~\"$instance\", name=~\"$circuitbreaker_name\"}[1m])) by (le))",
           "format": "time_series",
@@ -937,7 +937,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus-pxloc-vitale"
+        "uid": "mimir-pxloc"
       },
       "fieldConfig": {
         "defaults": {
@@ -1070,7 +1070,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "increase(resilience4j_circuitbreaker_calls_seconds_sum{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}[1m]) / increase(resilience4j_circuitbreaker_calls_seconds_count{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}[1m])",
           "format": "time_series",
@@ -1081,7 +1081,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "expr": "sum(increase(resilience4j_circuitbreaker_calls_seconds_sum{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}[1m])) / sum(increase(resilience4j_circuitbreaker_calls_seconds_count{instance=~\"$instance\",name=~\"$circuitbreaker_name\"}[1m]))",
           "format": "time_series",
@@ -1110,7 +1110,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "fieldConfig": {
             "defaults": {
@@ -1256,7 +1256,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus-pxloc-vitale"
+                "uid": "mimir-pxloc"
               },
               "expr": "rate(resilience4j_retry_calls_total{application=~\"$application\",name=~\"$retry_name\",}[1m])",
               "format": "time_series",
@@ -1299,7 +1299,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus-pxloc-vitale"
+            "uid": "mimir-pxloc"
           },
           "fieldConfig": {
             "defaults": {
@@ -1383,7 +1383,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus-pxloc-vitale"
+                "uid": "mimir-pxloc"
               },
               "expr": "resilience4j_bulkhead_available_concurrent_calls{application=~\"$application\",name=~\"$bulkhead_name\"}",
               "format": "time_series",
@@ -1394,7 +1394,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus-pxloc-vitale"
+                "uid": "mimir-pxloc"
               },
               "expr": "resilience4j_bulkhead_max_allowed_concurrent_calls{application=~\"$application\",name=~\"$bulkhead_name\"}",
               "format": "time_series",
@@ -1434,7 +1434,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(application)",
         "hide": 0,
@@ -1464,7 +1464,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(resilience4j_circuitbreaker_state, instance)",
         "hide": 0,
@@ -1498,7 +1498,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(resilience4j_circuitbreaker_state, name)",
         "hide": 0,
@@ -1532,7 +1532,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(resilience4j_retry_calls_total, name)",
         "hide": 0,
@@ -1562,7 +1562,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "prometheus-pxloc-vitale"
+          "uid": "mimir-pxloc"
         },
         "definition": "label_values(resilience4j_bulkhead_available_concurrent_calls, name)",
         "hide": 0,

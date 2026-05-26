@@ -3,9 +3,9 @@ update_settings(max_parallel_updates=1)
 
 local_resource(
     'observability-configmaps',
-    'kubectl create configmap observability-prometheus-config --from-file=prometheus.yml=polar-deployment/kubernetes/local/prometheus-k8s.yml --dry-run=client -o yaml | kubectl apply -f - && '
     'kubectl create configmap observability-tempo-config --from-file=tempo.yml=polar-deployment/docker/platform/tempo/tempo.yml --dry-run=client -o yaml | kubectl apply -f - && '
-    'kubectl create configmap observability-fluent-bit-config --from-file=fluent-bit.conf=polar-deployment/kubernetes/local/fluent-bit-k8s.conf --dry-run=client -o yaml | kubectl apply -f - && '
+    'kubectl create configmap observability-mimir-config --from-file=mimir.yml=polar-deployment/docker/platform/mimir/mimir.yml --dry-run=client -o yaml | kubectl apply -f - && '
+    'kubectl create configmap observability-alloy-config --from-file=config.alloy=polar-deployment/kubernetes/local/alloy-k8s.alloy --dry-run=client -o yaml | kubectl apply -f - && '
     'kubectl create configmap observability-grafana-datasources --from-file=datasource.yml=polar-deployment/docker/platform/grafana/datasources/datasource.yml --dry-run=client -o yaml | kubectl apply -f - && '
     'kubectl create configmap observability-grafana-dashboards --from-file=polar-deployment/docker/platform/grafana/dashboards --dry-run=client -o yaml | kubectl apply -f - && '
     'kubectl create configmap observability-grafana-config --from-file=grafana.ini=polar-deployment/docker/platform/grafana/grafana.ini --dry-run=client -o yaml | kubectl apply -f -'
@@ -13,9 +13,10 @@ local_resource(
 
 k8s_yaml('observability.yml')
 k8s_resource('grafana', resource_deps=['observability-configmaps'])
-k8s_resource('prometheus', resource_deps=['observability-configmaps'])
+k8s_resource('grafana-alloy', resource_deps=['observability-configmaps'])
+k8s_resource('mimir', resource_deps=['observability-configmaps'])
 k8s_resource('tempo', resource_deps=['observability-configmaps'])
-k8s_resource('fluent-bit', resource_deps=['observability-configmaps'])
+k8s_resource('loki', resource_deps=['observability-configmaps'])
 
 include('../../../config-service/Tiltfile')
 include('../../../edge-service/Tiltfile')

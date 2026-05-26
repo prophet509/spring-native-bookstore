@@ -36,7 +36,15 @@ spec:
             - name: OTEL_SERVICE_NAME
               value: "order-service"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://tempo:4317"
+              value: "http://grafana-alloy:4318"
+            - name: MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT
+              value: "http://grafana-alloy:4318/v1/traces"
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+              value: "http://grafana-alloy:4318/v1/logs"
+            - name: MANAGEMENT_OPENTELEMETRY_LOGGING_EXPORT_OTLP_ENDPOINT
+              value: "http://grafana-alloy:4318/v1/logs"
             - name: OTEL_METRICS_EXPORTER
               value: "none"
             - name: POLAR_CATALOG_SERVICE_URL

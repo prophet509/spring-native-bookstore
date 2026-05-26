@@ -51,8 +51,14 @@ test-%: ## Test one service (config|catalog|order|inventory|dispatcher|edge)
 clean-%: ## Clean one service (config|catalog|order|inventory|dispatcher|edge)
 	cd $*-service && ./gradlew clean
 
+PROFILE ?= default
 run-%: ## Run one service locally (config|catalog|order|inventory|dispatcher|edge)
+ifeq ($(PROFILE),prod)
+	cd $*-service && KEYCLOAK_URL=http://localhost:8080 \
+		./gradlew bootRun --args="--spring.profiles.active=prod"
+else
 	cd $*-service && ./gradlew bootRun
+endif
 
 image-publish-%: ## Build and publish OCI image for one service (config|catalog|order|inventory|dispatcher|edge)
 	cd $*-service && ./gradlew bootBuildImage --publishImage

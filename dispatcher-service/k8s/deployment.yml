@@ -33,8 +33,6 @@ spec:
               value: "false"
             - name: BPL_JVM_THREAD_COUNT
               value: "50"
-            - name: JAVA_TOOL_OPTIONS
-              value: "-javaagent:/workspace/BOOT-INF/lib/opentelemetry-javaagent-1.33.3.jar"
             - name: OTEL_SERVICE_NAME
               value: "dispatcher-service"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT

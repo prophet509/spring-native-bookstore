@@ -1,4 +1,4 @@
-name: Catalog CI Pipeline
+name: Order CI Pipeline
 on:
   workflow_call:
 

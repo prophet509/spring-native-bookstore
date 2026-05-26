@@ -18,6 +18,7 @@ services:
       - BPL_JVM_THREAD_COUNT=50
       - OTEL_SERVICE_NAME=config-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
+      - OTEL_METRICS_EXPORTER=none
       - ENCRYPT_KEY=sharedkey
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
     volumes:
@@ -192,7 +193,6 @@ services:
     command: -config.file=/etc/tempo-config.yml
     ports:
       - "3110:3100"
-      - "4317:4317"
     volumes:
       - ./platform/tempo/tempo.yml:/etc/tempo-config.yml
     networks:

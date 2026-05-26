@@ -8,7 +8,7 @@ spring:
       client:
         provider:
           keycloak:
-            issuer-uri: http://polar-keycloak:8080/realms/PolarBookshop
+            issuer-uri: ${KEYCLOAK_URL:http://polar-keycloak:8080}/realms/PolarBookshop
   cloud:
     config:
       bus:

@@ -1,0 +1,10 @@
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat('1.17.0').aosp()
+        importOrder()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}

@@ -16,7 +16,7 @@ Build and operate 7 Spring Boot services with deterministic local and CI behavio
 
 - No monorepo root — each service has its own `./gradlew` in its directory.
 - Most services follow Hexagonal Architecture: `adapter/` (in/out), `application/` (port/service), `domain/`.
-- `gradle/observability.gradle` shared by all services (sets `otelLogbackAppenderVersion`).
+- `gradle/` shared scripts: `java-base.gradle` (all), `spotless.gradle` (all), `boot-image.gradle` (all), `observability.gradle` (all), `jooq.gradle` (order + inventory).
 - Config Server serves `config/` directory; services import config from `http://localhost:8888`.
 - Prefer editing `config/*.yml` for shared runtime behavior; never hardcode service-local values that change across environments.
 
@@ -43,6 +43,33 @@ All make targets for `config|catalog|order|edge|inventory|dispatcher|search`.
 1. `make infra-up` (or `compose-up` to also start app containers)
 2. `make run-config` (Config Server must be available before other services)
 3. `make run-edge` `make run-catalog` `make run-order` `make run-dispatcher` `make run-inventory` `make run-search`
+
+### Local tracing mode
+To run a service with OTEL tracing (sends traces to Tempo via Grafana Alloy on `localhost:4318`),
+use the `PROFILE=prod` flag:
+
+```bash
+make run-order PROFILE=prod
+make run-catalog PROFILE=prod
+```
+
+Without the flag, services run with default profile (no tracing):
+
+```bash
+make run-order    # default (no tracing)
+make run-catalog  # default (no tracing)
+```
+
+The shared OTEL config lives in `config/application.yml` — all services that import from Config
+Server get it automatically. Use `KEYCLOAK_URL` env var (defaults vary by profile) to toggle the
+Keycloak endpoint:
+
+| Profile | Default `KEYCLOAK_URL` | Resolves to |
+|---------|------------------------|-------------|
+| default | `http://localhost:8080` | keycloak on host |
+| prod    | `http://polar-keycloak:8080` | keycloak via Docker DNS |
+
+All prod configs (`config/*-prod.yml`) use `KEYCLOAK_URL` consistently — no hardcoded hostnames.
 
 ## Testing
 - JUnit 5 with Spring test slices preferred over `@SpringBootTest`.

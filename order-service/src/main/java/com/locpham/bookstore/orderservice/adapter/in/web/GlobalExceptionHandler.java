@@ -17,7 +17,7 @@ import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-@ControllerAdvice
+@ControllerAdvice(basePackages = "com.locpham.bookstore.orderservice.adapter.in.web")
 public class GlobalExceptionHandler {
 
     private void enrichProblemDetail(ProblemDetail problemDetail, ServerWebExchange exchange) {

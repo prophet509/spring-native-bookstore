@@ -34,6 +34,8 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.retry:spring-retry'
     implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
     runtimeOnly("io.netty:netty-resolver-dns-native-macos") {
         artifact {
             classifier = 'osx-aarch_64'

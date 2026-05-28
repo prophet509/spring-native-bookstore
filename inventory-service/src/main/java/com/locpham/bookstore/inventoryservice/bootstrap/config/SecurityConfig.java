@@ -21,7 +21,7 @@ public class SecurityConfig {
         return http.authorizeExchange(
                         exchange ->
                                 exchange.pathMatchers("/actuator/**")
-                                        .permitAll()
+                                        .hasRole("ADMIN")
                                         .pathMatchers(HttpMethod.GET, "/inventory/**")
                                         .permitAll()
                                         .anyExchange()

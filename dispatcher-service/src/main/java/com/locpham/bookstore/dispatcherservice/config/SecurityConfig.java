@@ -1,9 +1,7 @@
-package com.locpham.bookstore.orderservice.bootstrap.config;
+package com.locpham.bookstore.dispatcherservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -13,7 +11,6 @@ import org.springframework.security.web.server.savedrequest.NoOpServerRequestCac
 
 @Configuration
 @EnableWebFluxSecurity
-@EnableReactiveMethodSecurity
 public class SecurityConfig {
 
     @Bean
@@ -22,10 +19,6 @@ public class SecurityConfig {
                         exchange ->
                                 exchange.pathMatchers("/actuator/**")
                                         .hasRole("ADMIN")
-                                        .pathMatchers(HttpMethod.GET, "/orders/**")
-                                        .authenticated()
-                                        .pathMatchers(HttpMethod.POST, "/orders/**")
-                                        .hasAnyRole("customer", "employee")
                                         .anyExchange()
                                         .authenticated())
                 .oauth2ResourceServer(

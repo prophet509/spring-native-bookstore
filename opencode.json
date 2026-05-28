@@ -14,6 +14,23 @@
       ],
       "enabled": true
     },
+    "code-review-graph": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "code-review-graph",
+        "serve"
+      ],
+      "enabled": true
+    },
+    "claude-mem": {
+      "type": "local",
+      "command": [
+        "node",
+        "/Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs"
+      ],
+      "enabled": true
+    },
     "java-lsp": {
       "type": "local",
       "command": ["npx", "-y", "lsp-mcp-server"],

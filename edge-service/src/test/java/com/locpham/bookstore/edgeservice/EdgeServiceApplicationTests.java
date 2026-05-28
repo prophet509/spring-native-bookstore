@@ -13,8 +13,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @Import(TestChannelBinderConfiguration.class)
 class EdgeServiceApplicationTests {
 
-    @MockitoBean
-    private ReactiveClientRegistrationRepository reactiveClientRegistrationRepository;
+    @MockitoBean private ReactiveClientRegistrationRepository reactiveClientRegistrationRepository;
 
     @Test
     void verifyThatSpringContextLoads() {}

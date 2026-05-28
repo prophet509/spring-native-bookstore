@@ -4,6 +4,14 @@
       "command": "codegraph",
       "args": ["serve", "--mcp"]
     },
+    "code-review-graph": {
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"]
+    },
+    "claude-mem": {
+      "command": "node",
+      "args": ["/Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs"]
+    },
     "java-lsp": {
       "command": "npx",
       "args": ["-y", "lsp-mcp-server"],

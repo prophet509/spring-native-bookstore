@@ -19,7 +19,7 @@ public class SecurityConfig {
                         authorize ->
                                 authorize
                                         .requestMatchers("/actuator/**")
-                                        .permitAll()
+                                        .hasRole("ADMIN")
                                         .anyRequest()
                                         .authenticated())
                 .httpBasic(Customizer.withDefaults())

@@ -73,7 +73,12 @@ public class SecurityConfig {
         return http.securityMatcher(
                         ServerWebExchangeMatchers.pathMatchers(
                                 "/actuator/prometheus", "/actuator/health/**"))
-                .authorizeExchange(exchange -> exchange.anyExchange().permitAll())
+                .authorizeExchange(
+                        exchange ->
+                                exchange.pathMatchers("/actuator/health/**")
+                                        .permitAll()
+                                        .pathMatchers("/actuator/prometheus")
+                                        .hasRole("ADMIN"))
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .build();
     }
@@ -86,7 +91,7 @@ public class SecurityConfig {
         return http.authorizeExchange(
                         exchange ->
                                 exchange.pathMatchers("/actuator/**")
-                                        .permitAll()
+                                        .hasRole("ADMIN")
                                         .pathMatchers("/", "/*.css", "/*.js", "/favicon.ico")
                                         .permitAll()
                                         .pathMatchers(HttpMethod.GET, "/books/**")

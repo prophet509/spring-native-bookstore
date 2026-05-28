@@ -27,7 +27,7 @@ public class SecurityConfig {
                         authorize ->
                                 authorize
                                         .requestMatchers(EndpointRequest.toAnyEndpoint())
-                                        .permitAll()
+                                        .hasRole("ADMIN")
                                         .requestMatchers(HttpMethod.GET, "/", "/books/**")
                                         .permitAll()
                                         .anyRequest()

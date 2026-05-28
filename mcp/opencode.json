@@ -5,6 +5,14 @@
       "type": "local",
       "command": ["codegraph", "serve", "--mcp"]
     },
+    "code-review-graph": {
+      "type": "local",
+      "command": ["uvx", "code-review-graph", "serve"]
+    },
+    "claude-mem": {
+      "type": "local",
+      "command": ["node", "/Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs"]
+    },
     "java-lsp": {
       "type": "local",
       "command": ["npx", "-y", "lsp-mcp-server"],

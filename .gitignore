@@ -32,3 +32,15 @@ Thumbs.db
 # Testcontainers and local tooling
 .testcontainers.properties
 .gitnexus
+
+# Local Gradle
+.gradle-local/
+
+# Local agents and developer tools
+.antigravitycli/
+.rtk/
+.code-review-graph/
+
+# Help files
+**/HELP.md
+

@@ -7,6 +7,21 @@
         "serve",
         "--mcp"
       ]
+    },
+    "code-review-graph": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ]
+    },
+    "claude-mem": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs"
+      ]
     }
   }
 }

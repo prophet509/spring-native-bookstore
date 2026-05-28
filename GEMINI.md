@@ -1,139 +1,108 @@
-# GEMINI.md
+# GEMINI.md (CAVEMAN COMPRESSED)
 
-Senior Java dev, Spring Boot + Spring Cloud microservices. Bias caution over speed.
+## Core Mandate
+Senior Java Dev, Spring Boot + Spring Cloud microservices. Prioritize correctness and caution.
+Reference style for refactoring: `order-service` (Hexagonal style: domain ➔ application ➔ adapter ➔ bootstrap).
 
-## Mission
+---
 
-Build + operate Spring bookstore: `catalog-service`, `order-service`, `dispatcher-service`, `edge-service`, `config-service`.
-Refactor incrementally toward `order-service` style: explicit boundaries, use-case app services, framework-isolated adapters, config-only bootstrap.
-Favor correctness + reproducibility over shortcuts.
+## Services & Ports
+* `config-service`: Config Server (`8888`). Serve shared configurations in `config/`.
+* `catalog-service`: JDBC + Flyway (`9001`). DB: `jdbc:postgresql://localhost:5432/polardb_catalog`
+* `order-service`: WebFlux + R2DBC + Flyway + jOOQ (`9002`). DB: `r2dbc:postgresql://localhost:5433/polardb_order`
+* `inventory-service`: WebFlux + R2DBC + Flyway + jOOQ (`9004`). DB: `r2dbc:postgresql://localhost:5434/polardb_inventory`
+* `edge-service`: Spring Cloud Gateway + Redis (`9000`)
+* `dispatcher-service`: Stream processor (Kafka) (`9003`)
+* `search-service`: WebFlux + Elasticsearch (`9005`)
 
-## Repository Layout
+---
 
-- `catalog-service/`: REST catalog, Spring MVC + Spring Data JDBC + Flyway, port `9001`
-- `order-service/`: reactive orders, Spring WebFlux + Spring Data R2DBC + Flyway, port `9002`
-- `dispatcher-service/`: stream processor, consumes accepted orders, publishes dispatched events
-- `edge-service/`: API gateway for catalog + order
-- `config-service/`: Spring Cloud Config Server, port `8888`
-- `config/`: config data for Config Server (per service/profile YAML)
-- `polar-deployment/docker/`: Docker Compose — infra (`docker-compose.yml`) + app (`service.yml`)
-- `polar-deployment/kubernetes/local/`: local K8s manifests (Postgres, Kafka, Keycloak, Redis, observability)
-- No monorepo Gradle root; each service is standalone with own `./gradlew`
-
-## Runtime and Configuration
-
-- Config Server: `http://localhost:8888`; `catalog-service` + `order-service` import from it
-- Local DBs:
-  - catalog: `jdbc:postgresql://localhost:5432/polardb_catalog`
-  - order: `r2dbc:postgresql://localhost:5433/polardb_order`
-- Edit `config/*.yml` for runtime behavior; no hardcoded service-local values
-- No real secrets committed; use env vars, keep `.env*` ignored
-
-## Toolchain and Versions
-
-- Java 21 via Gradle toolchains
-- Spring Boot `4.0.3`
-- Spring Cloud BOM `2025.1.0`
-- Testcontainers BOM `1.19.7`
-- Spotless `6.25.0` in `catalog-service` + `order-service`
-
-## Target Architecture Direction
-
-`order-service` = reference style for future refactors. Hexagonal structure:
-
-- `domain`: framework-free types + business invariants
-- `application`: ports, commands/queries, use-case services
-- `adapter/in`: controllers, messaging consumers, request/response DTOs
-- `adapter/out`: persistence, HTTP clients, messaging publishers
-- `bootstrap`: Spring wiring + framework config only
-
-Refactor inside out: clean domain → ports + use-case services → isolate adapters → simplify bootstrap.
-One service/boundary at a time; no cross-service rewrites in one pass.
-
-## Working Principles
-
-- State assumptions; uncertain → ask.
-- Multiple interpretations → present all, don't pick silently.
-- Simplest impl; no speculative abstractions, no impossible-case error handling.
-- Surgical changes: touch only required files/lines, no opportunistic refactors.
-- Every changed line traces to requested outcome or green build.
-- Unclear/risky → stop, clarify.
-
-## Build and Run
-
+## Operational Commands
+```bash
+# Build
+./gradlew build
+# Run
+./gradlew bootRun
+# Generate jOOQ (after migration)
+./gradlew generateJooq
 ```
-# per-service builds
-cd catalog-service && ./gradlew build
-cd order-service && ./gradlew build
-cd config-service && ./gradlew build
-cd order-service && ./gradlew generateJooq   # after Flyway migration changes
+Root targets: `make build`, `make test`, `make run-<service>`, `make compose-up`, `make infra-up`.
 
-# run
-cd config-service && ./gradlew bootRun
-cd catalog-service && ./gradlew bootRun
-cd order-service && ./gradlew bootRun
-```
+---
 
-Root Makefile: `make build`, `make test`, `make clean`, `make run-catalog`, `make run-order`, `make infra-up`, `make infra-down`, `make compose-up`, `make k8s-up`.
+## Working Rules
+* State assumptions immediately. Ask if uncertain.
+* If multiple interpretations: present all options, do NOT choose silently.
+* Simplest implementation: no speculative code, no unnecessary abstraction.
+* Narrow, surgical changes. Limit touched files to task.
+* Run tests and formatting before committing.
+
+---
+
+## Architecture Conventions
+* **Domain**: clean Java types, business invariants, no frameworks.
+* **Application**: ports, use cases, commands/queries.
+* **Adapter**: inbound (REST Web controllers, DTOs) and outbound (jOOQ/JDBC repos, HTTP clients).
+* **Bootstrap**: Spring config, dependency injection wiring.
+* Restrict DTO/repository models within adapters; do not leak to domain.
+* Jakarta Bean Validation on REST request DTOs.
+* Flyway migrations: `V<next>__desc.sql` only. Do NOT edit history.
+
+---
 
 ## Testing Strategy
+* Test pyramid: Domain Unit ➔ App Service (mocked ports) ➔ Adapter Integration ➔ Web Slice ➔ E2E.
+* Deterministic, isolated by profile. Testcontainers need running Docker.
+* Run test: `./gradlew test --tests 'package.ClassName[.method]'` from service directory.
+* Write failing test reproducing bugs before fixing prod code.
 
-- JUnit 5 + Spring test slices; `@SpringBootTest` only for cross-layer behavior.
-- Tests deterministic + isolated by profile.
-- Catalog: JDBC Testcontainers profile (`integration`), requires Docker.
-- Order: R2DBC/Testcontainers, requires Docker.
-- Single test: `./gradlew test --tests 'package.ClassName[.method]'` from service dir.
-- Test pyramid: domain unit → app service (mocked ports) → adapter integration → web slice → e2e (critical flows only).
-- Bugs: write failing test reproducing behavior before changing prod code.
-- Refactors: tests pass before + after.
+---
 
-## Formatting and Style
+## Formatting (Spotless)
+* Applied automatically. Check: `./gradlew spotlessCheck` | Fix: `./gradlew spotlessApply`.
+* Matches `spotless { java { googleJavaFormat('1.17.0').aosp() } }`.
+* Excludes generated jOOQ folder `src/main/generated-jooq/`.
 
-```
-cd catalog-service && ./gradlew spotlessApply spotlessCheck
-cd order-service && ./gradlew spotlessApply spotlessCheck
-```
+---
 
-- `config-service`: no Spotless; match existing style.
-- Constructor injection, explicit imports, thin controllers, domain logic in `domain`.
+## MCP Tools Configured
+Use MCP servers for developer workflows:
+* **codegraph**: structural analysis (context, trace, explore, impact). Must check impact before edit.
+* **code-review-graph (CRG)**: persistent codebase SQLite relationships. `uvx code-review-graph serve`.
+* **claude-mem**: session long-term memory. `node /Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs`.
+* **java-lsp**: editor-like Java navigation, refactoring, hover. Expects `jls` on `PATH`.
+* **java-app-modernization**: Spring Boot/Java upgrades. `APPMOD_MCP_COLLECT_TELEMETRY=false`.
+* **bookstore-postgres-catalog / -order / -inventory**: restricted read-only SQL inspection.
+* **bookstore-redis**: Redis CLI tool calls.
+* **bookstore-keycloak**: Keycloak client.
+* **bookstore-kafka**: Kafka topics / broker inspector.
+* **bookstore-elasticsearch**: Elasticsearch ES|QL search tool calls.
 
-## API and Layer Conventions
+---
 
-- Controllers in `web` packages, REST naming (`/books`, `/orders`).
-- Business rules in service/domain; controllers do request/response mapping.
-- `@RestControllerAdvice` for exception handling where present.
-- Jakarta Bean Validation close to request/domain models.
-- Request/response DTOs → inbound adapters only.
-- External client DTOs → outbound adapters only.
+## LLM Coding Guidelines
+*Bias caution over speed.*
 
-## Persistence Conventions
+### 1. Think First
+* No assumptions. If confused, ask.
+* Multiple options? Present all. No silent picking.
+* Simpler way exists? Suggest. Push back.
+* Unclear? Stop. Name confusion. Ask.
 
-- Catalog: Spring Data JDBC; migrations in `catalog-service/src/main/resources/db/migration`.
-- Order: Spring Data R2DBC + Flyway; schema evolution incremental + versioned.
-- Migrations as `V<next>__description.sql`; never edit historical files.
-- jOOQ/persistence adapter types stay inside adapter layer; out of `domain` + `application`.
+### 2. Simplicity First
+* Minimum code. No speculative features.
+* No single-use abstractions. No extra configurations.
+* No dead-end error checks.
+* Short over long: 200 lines ➔ 50 lines. Overcomplicated? Simplify.
 
-## CI/CD
+### 3. Surgical Edits
+* Touch only what requested. No "improvement" of surrounding code.
+* No unsolicited refactoring. Match existing style.
+* Dead code found? Mention only. Do not delete.
+* Remove unused imports/vars caused by YOUR edits.
 
-- `.github/workflows/ci-catalog-pipeline.yml`, `ci-order-pipeline.yml`, `ci-config-pipeline.yml`, `ci-bookstore.yml` (orchestrator on `main` pushes).
-- Local commands aligned with CI (`./gradlew build`, images via `bootBuildImage`).
-
-## Git and Agent Workflow
-
-- No revert/rewrite of unrelated user changes.
-- No destructive Git commands unless asked.
-- Before commit/PR: run tests + formatting for touched services.
-- Narrow diffs; don't clean up unrelated code while refactoring.
-- Ambiguous requirements → ask or state assumptions before broad changes.
-- Multi-step work → short plan with verify points; update as task evolves.
-
-## MCP Tooling
-
-- MCP templates live in `mcp/`.
-- Use `mcp/claude_desktop_config.json` for Claude Desktop, `mcp/windsurf_mcp_config.json` for Windsurf, and `mcp/opencode.json` for OpenCode.
-- Expected MCP servers: `gitnexus`, `java-lsp`, `java-app-modernization`, `bookstore-postgres-catalog`, `bookstore-postgres-order`, `bookstore-postgres-inventory`, `bookstore-redis`, and `bookstore-keycloak`.
-- Use `gitnexus` first for repository-wide understanding, impact analysis, callers/callees, execution flows, and safe renames.
-- Use `java-lsp` for Java symbol navigation, diagnostics, rename previews, hover/type info, code actions, and call/type hierarchy.
-- Use `java-app-modernization` for Java/Spring upgrade, migration, and modernization analysis only; keep `APPMOD_MCP_COLLECT_TELEMETRY=false`.
-- `java-lsp` reads `mcp/lsp-mcp.json` and expects `jls` on `PATH`; if unavailable, fall back to GitNexus plus Gradle verification.
-- Data/runtime MCP servers target local Docker services: Postgres catalog/order/inventory, Redis, and Keycloak.
+### 4. Goal-Driven
+* Plan: `[Step] ➔ verify: [check]`.
+* "Add validation" ➔ write failing test, make pass.
+* "Fix bug" ➔ write reproducing test, make pass.
+* "Refactor" ➔ run tests before/after.

@@ -30,8 +30,9 @@ management:
         include: refresh, health, info, prometheus
   endpoint:
     health:
-      show-details: always
-      show-components: always
+      show-details: when_authorized
+      show-components: when_authorized
+      roles: ADMIN
       probes:
         enabled: true
   metrics:

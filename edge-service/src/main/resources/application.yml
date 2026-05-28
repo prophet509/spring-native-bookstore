@@ -45,6 +45,9 @@ management:
         include: health,info,gateway,prometheus
   endpoint:
     health:
+      show-details: when_authorized
+      show-components: when_authorized
+      roles: ADMIN
       probes:
         enabled: true
   metrics:

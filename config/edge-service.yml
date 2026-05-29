@@ -68,6 +68,7 @@ spring:
                   args:
                     name: catalogCircuitBreaker
                     fallbackUri: forward:/catalog-fallback
+                - SetResponseHeader=Cache-Control, public, max-age=30
             - id: order-route
               uri: ${ORDER_SERVICE_URL:http://localhost:9002}
               predicates:
@@ -95,6 +96,7 @@ spring:
                   args:
                     name: searchCircuitBreaker
                     fallbackUri: forward:/search-fallback
+                - SetResponseHeader=Cache-Control, public, max-age=30
 
 resilience4j:
   circuitbreaker:
@@ -104,7 +106,23 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 5
         failure-rate-threshold: 50
         wait-duration-in-open-state: 1500
+      cache:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+        slow-call-duration-threshold: 300ms
+        slow-call-rate-threshold: 80
   timelimiter:
     configs:
       default:
         timeout-duration: 5s
+      cache:
+        timeout-duration: 300ms
+      origin:
+        timeout-duration: 2s
+  retry:
+    configs:
+      transient:
+        max-attempts: 3
+        wait-duration: 100ms
+        enable-exponential-backoff: true

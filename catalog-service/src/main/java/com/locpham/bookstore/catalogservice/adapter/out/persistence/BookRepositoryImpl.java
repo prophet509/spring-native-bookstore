@@ -4,11 +4,12 @@ import com.locpham.bookstore.catalogservice.application.port.out.BookRepository;
 import com.locpham.bookstore.catalogservice.domain.book.Book;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -17,7 +18,8 @@ public class BookRepositoryImpl implements BookRepository {
 
     private final SpringDataBookRepository springDataBookRepository;
 
-    public BookRepositoryImpl(CacheManager cacheManager, SpringDataBookRepository springDataBookRepository) {
+    public BookRepositoryImpl(
+            CacheManager cacheManager, SpringDataBookRepository springDataBookRepository) {
         this.springDataBookRepository = springDataBookRepository;
         this.cacheManager = cacheManager;
     }
@@ -38,12 +40,17 @@ public class BookRepositoryImpl implements BookRepository {
     }
 
     @Override
-    @CacheEvict(value = "books", key = "#isbn")
+    @Caching(
+            evict = {
+                @CacheEvict(value = "books", key = "#isbn"),
+                @CacheEvict(value = "booksPage", allEntries = true)
+            })
     public void deleteByIsbn(String isbn) {
         springDataBookRepository.deleteByIsbn(isbn);
     }
 
     @Override
+    @Cacheable(value = "booksPage", key = "#root.methodName")
     public Iterable<Book> findAll() {
         return StreamSupport.stream(springDataBookRepository.findAll().spliterator(), false)
                 .map(BookEntity::toDomain)
@@ -51,6 +58,9 @@ public class BookRepositoryImpl implements BookRepository {
     }
 
     @Override
+    @Caching(
+            put = {@CachePut(value = "books", key = "#book.isbn")},
+            evict = {@CacheEvict(value = "booksPage", allEntries = true)})
     public Book save(Book book) {
         BookEntity entity = BookEntity.fromDomain(book);
         BookEntity saved = springDataBookRepository.save(entity);

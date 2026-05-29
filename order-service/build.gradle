@@ -36,6 +36,9 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+    implementation 'io.github.resilience4j:resilience4j-reactor'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3'
     runtimeOnly("io.netty:netty-resolver-dns-native-macos") {
         artifact {
             classifier = 'osx-aarch_64'
@@ -52,6 +55,7 @@ dependencies {
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:r2dbc'
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
@@ -90,7 +94,7 @@ jooq {
                 generator {
                     database {
                         name = 'org.jooq.meta.postgres.PostgresDatabase'
-                        includes = 'public.orders'
+                        includes = 'public.orders | public.catalog_book_snapshot'
                         excludes = ''
                         inputSchema = 'public'
                     }

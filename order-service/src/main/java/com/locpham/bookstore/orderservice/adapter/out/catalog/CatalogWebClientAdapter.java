@@ -9,12 +9,14 @@ import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Component
+@Profile("http-fallback")
 public class CatalogWebClientAdapter implements CatalogBookPort {
 
     private static final Logger log = LoggerFactory.getLogger(CatalogWebClientAdapter.class);

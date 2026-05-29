@@ -1,13 +1,11 @@
 package com.locpham.bookstore.catalogservice.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.locpham.bookstore.catalogservice.domain.book.Book;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,12 +32,12 @@ class BookRepositoryImplTests {
         String isbn = "1234567890";
         Cache cache = mock(Cache.class);
         Cache.ValueWrapper valueWrapper = mock(Cache.ValueWrapper.class);
-        
+
         given(cacheManager.getCache("books")).willReturn(cache);
         given(cache.get(isbn)).willReturn(valueWrapper);
-        
+
         boolean exists = bookRepository.existsByIsbn(isbn);
-        
+
         assertThat(exists).isTrue();
         verify(springDataBookRepository, never()).existsByIsbn(isbn);
     }
@@ -48,13 +46,13 @@ class BookRepositoryImplTests {
     void existsByIsbnWhenCacheMissChecksDatabase() {
         String isbn = "1234567890";
         Cache cache = mock(Cache.class);
-        
+
         given(cacheManager.getCache("books")).willReturn(cache);
         given(cache.get(isbn)).willReturn(null);
         given(springDataBookRepository.existsByIsbn(isbn)).willReturn(true);
-        
+
         boolean exists = bookRepository.existsByIsbn(isbn);
-        
+
         assertThat(exists).isTrue();
         verify(springDataBookRepository).existsByIsbn(isbn);
     }
@@ -62,12 +60,12 @@ class BookRepositoryImplTests {
     @Test
     void existsByIsbnWhenCacheNullChecksDatabase() {
         String isbn = "1234567890";
-        
+
         given(cacheManager.getCache("books")).willReturn(null);
         given(springDataBookRepository.existsByIsbn(isbn)).willReturn(false);
-        
+
         boolean exists = bookRepository.existsByIsbn(isbn);
-        
+
         assertThat(exists).isFalse();
         verify(springDataBookRepository).existsByIsbn(isbn);
     }

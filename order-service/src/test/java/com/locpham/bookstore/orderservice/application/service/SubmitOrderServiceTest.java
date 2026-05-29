@@ -10,7 +10,6 @@ import com.locpham.bookstore.orderservice.application.command.SubmitOrderCommand
 import com.locpham.bookstore.orderservice.application.port.out.CatalogBookPort;
 import com.locpham.bookstore.orderservice.application.port.out.OrderCommandPort;
 import com.locpham.bookstore.orderservice.application.port.out.OrderEventPublisherPort;
-import com.locpham.bookstore.orderservice.domain.exception.BookNotFoundException;
 import com.locpham.bookstore.orderservice.domain.model.BookSnapshot;
 import com.locpham.bookstore.orderservice.domain.model.Order;
 import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
@@ -32,7 +31,7 @@ public class SubmitOrderServiceTest {
     @InjectMocks private SubmitOrderService submitOrderService;
 
     @Test
-    void whenBookExistsAndInStock_shouldSubmitOrder() {
+    void whenBookSnapshotExists_shouldSubmitOrder() {
         var isbn = "1234567890";
         var createdBy = "isabelle";
         var book = new BookSnapshot(isbn, "Title", 9.99);
@@ -57,18 +56,38 @@ public class SubmitOrderServiceTest {
     }
 
     @Test
-    void whenBookDoesNotExist_shouldPropagateException() {
+    void whenSnapshotReturnsEmpty_shouldBuildRejectedOrder() {
         var isbn = "1234567890";
         var createdBy = "isabelle";
         var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
-        given(catalogBookPort.loadBook(isbn))
-                .willReturn(Mono.error(new BookNotFoundException(isbn)));
+        given(catalogBookPort.loadBook(isbn)).willReturn(Mono.empty());
+        given(orderCommandPort.save(any(Order.class)))
+                .willAnswer(inv -> Mono.just(inv.getArgument(0)));
 
         StepVerifier.create(submitOrderService.submitOrder(command))
-                .expectError(BookNotFoundException.class)
-                .verify();
+                .assertNext(
+                        order -> {
+                            assertThat(order.status()).isEqualTo(OrderStatus.REJECTED);
+                            assertThat(order.book().isbn()).isEqualTo(isbn);
+                        })
+                .verifyComplete();
 
         verify(eventPublisher, never()).publishOrderCreated(any(Order.class));
+    }
+
+    @Test
+    void whenSnapshotReturnsEmpty_shouldNotCallHttpCatalog() {
+        var isbn = "1234567890";
+        var createdBy = "isabelle";
+        var command = new SubmitOrderCommand(isbn, 2, createdBy);
+
+        given(catalogBookPort.loadBook(isbn)).willReturn(Mono.empty());
+        given(orderCommandPort.save(any(Order.class)))
+                .willAnswer(inv -> Mono.just(inv.getArgument(0)));
+
+        StepVerifier.create(submitOrderService.submitOrder(command))
+                .expectNextCount(1)
+                .verifyComplete();
     }
 }

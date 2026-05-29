@@ -27,7 +27,7 @@ spring:
         max-interval: 2000
         multiplier: 1.1
     function:
-      definition: dispatchOrder;handleInventoryDecision
+      definition: dispatchOrder;handleInventoryDecision;handleBookCreated;handleBookUpdated;handleBookDeleted
     stream:
       bindings:
         dispatchOrder-in-0:
@@ -42,6 +42,20 @@ spring:
           destination: order-created-events
         orderCancelled-out-0:
           destination: order-cancelled-events
+        handleBookCreated-in-0:
+          destination: book.created
+          group: ${spring.application.name}
+        handleBookUpdated-in-0:
+          destination: book.updated
+          group: ${spring.application.name}
+        handleBookDeleted-in-0:
+          destination: book.deleted
+          group: ${spring.application.name}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 500ms
   r2dbc:
     url: r2dbc:postgresql://localhost:5433/polardb_order
     username: user

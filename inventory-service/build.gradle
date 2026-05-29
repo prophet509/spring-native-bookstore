@@ -32,6 +32,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
     runtimeOnly("io.netty:netty-resolver-dns-native-macos") {
         artifact {
             classifier = 'osx-aarch_64'
@@ -49,6 +50,7 @@ dependencies {
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:r2dbc'
     testImplementation 'org.testcontainers:kafka'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'

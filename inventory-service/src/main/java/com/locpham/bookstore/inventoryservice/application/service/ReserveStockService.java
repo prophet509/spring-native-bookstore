@@ -8,10 +8,12 @@ import com.locpham.bookstore.inventoryservice.domain.InsufficientStockException;
 import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
 import com.locpham.bookstore.inventoryservice.domain.Reservation;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -19,18 +21,22 @@ import reactor.core.publisher.Mono;
 public class ReserveStockService implements ReserveStockUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(ReserveStockService.class);
+    private static final String IDEM_PREFIX = "inv:idem:";
 
     private final InventoryPort inventoryPort;
     private final ReservationPort reservationPort;
     private final InventoryEventPublisher eventPublisher;
+    private final ReactiveRedisTemplate<String, String> redisTemplate;
 
     public ReserveStockService(
             InventoryPort inventoryPort,
             ReservationPort reservationPort,
-            InventoryEventPublisher eventPublisher) {
+            InventoryEventPublisher eventPublisher,
+            ReactiveRedisTemplate<String, String> redisTemplate) {
         this.inventoryPort = inventoryPort;
         this.reservationPort = reservationPort;
         this.eventPublisher = eventPublisher;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -47,6 +53,30 @@ public class ReserveStockService implements ReserveStockUseCase {
                                                 .map(i -> i.isbn() + "x" + i.quantity())
                                                 .collect(Collectors.joining(",")));
 
+        return checkRedisIdempotency(request.orderId())
+                .flatMap(
+                        alreadyReserved -> {
+                            if (alreadyReserved) {
+                                return Mono.just(InventoryDecision.reserved(request.orderId()));
+                            }
+                            return doReserve(request, isbns);
+                        });
+    }
+
+    private Mono<Boolean> checkRedisIdempotency(Long orderId) {
+        return redisTemplate
+                .opsForValue()
+                .setIfAbsent(IDEM_PREFIX + orderId, "1", Duration.ofHours(24))
+                .onErrorResume(
+                        e -> {
+                            logger.warn(
+                                    "Redis idempotency check failed for orderId={}, fallback to DB",
+                                    orderId);
+                            return Mono.just(false);
+                        });
+    }
+
+    private Mono<InventoryDecision> doReserve(OrderReserveRequest request, List<String> isbns) {
         return reservationPort
                 .findByOrderId(request.orderId())
                 .hasElements()

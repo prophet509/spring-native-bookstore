@@ -55,6 +55,8 @@ spec:
               value: "jdbc:postgresql://polar-postgres-inventory/polardb_inventory"
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "polar-kafka:19092"
+            - name: REDIS_HOST
+              value: "polar-redis"
           volumeMounts:
             - name: inventory-service-volume
               mountPath: /workspace/config

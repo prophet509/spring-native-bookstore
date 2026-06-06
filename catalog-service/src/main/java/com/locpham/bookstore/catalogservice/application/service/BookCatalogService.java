@@ -12,6 +12,7 @@ import com.locpham.bookstore.catalogservice.domain.book.exception.BookNotFoundEx
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BookCatalogService
@@ -28,6 +29,7 @@ public class BookCatalogService
     }
 
     @Override
+    @Transactional
     public Book editBookDetails(Book book) {
         var isbn = book.isbn();
         log.debug("Editing book details isbn={}", isbn);
@@ -47,6 +49,7 @@ public class BookCatalogService
     }
 
     @Override
+    @Transactional
     public void deleteBook(String isbn) {
         log.debug("Deleting book isbn={}", isbn);
 
@@ -79,6 +82,7 @@ public class BookCatalogService
     }
 
     @Override
+    @Transactional
     public Book addBookToCatalog(Book book) {
         var isbn = book.isbn();
         log.debug("Adding book to catalog isbn={}", isbn);

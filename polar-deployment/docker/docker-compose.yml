@@ -33,6 +33,7 @@ services:
   polar-postgres-catalog:
     image: "postgres:13.4"
     container_name: "polar-postgres-catalog"
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
     ports:
       - 5432:5432
     environment:
@@ -45,6 +46,7 @@ services:
   polar-postgres-order:
     image: "postgres:13.4"
     container_name: "polar-postgres-order"
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
     ports:
       - 5433:5432
     environment:
@@ -57,6 +59,7 @@ services:
   polar-postgres-inventory:
     image: "postgres:13.4"
     container_name: "polar-postgres-inventory"
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
     ports:
       - 5434:5432
     environment:
@@ -116,6 +119,35 @@ services:
       - KAFKA_LOG_DIRS=/var/lib/kafka/data
       - CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+    networks:
+      - polar-network
+
+  polar-kafka-connect:
+    image: debezium/connect:2.7.3.Final
+    hostname: polar-kafka-connect
+    container_name: polar-kafka-connect
+    depends_on:
+      - polar-kafka
+      - polar-postgres-order
+      - polar-postgres-inventory
+      - polar-postgres-catalog
+    ports:
+      - 8083:8083
+    environment:
+      - BOOTSTRAP_SERVERS=polar-kafka:19092
+      - GROUP_ID=bookstore-connect
+      - CONFIG_STORAGE_TOPIC=connect-configs
+      - OFFSET_STORAGE_TOPIC=connect-offsets
+      - STATUS_STORAGE_TOPIC=connect-status
+      - CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - STATUS_STORAGE_REPLICATION_FACTOR=1
+      - KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+    volumes:
+      - ./connect:/bookstore-connectors:ro
     networks:
       - polar-network
 

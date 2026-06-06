@@ -3,12 +3,93 @@
     "codegraph": {
       "type": "stdio",
       "command": "codegraph",
-      "args": [
-        "serve",
-        "--mcp",
-        "--path",
-        "/home/dgwa/Workspaces/spring-native-bookstore"
-      ]
+      "args": ["serve", "--mcp"]
+    },
+    "code-review-graph": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"]
+    },
+    "claude-mem": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs"]
+    },
+    "java-lsp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "lsp-mcp-server"],
+      "env": {
+        "LSP_CONFIG_PATH": "/Users/locpham/Desktop/Workspace/spring-native-bookstore/mcp/lsp-mcp.json",
+        "LSP_LOG_LEVEL": "info",
+        "LSP_WORKSPACE_ROOT": "/Users/locpham/Desktop/Workspace/spring-native-bookstore"
+      }
+    },
+    "java-app-modernization": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@microsoft/github-copilot-app-modernization-mcp-server@latest"],
+      "env": {
+        "APPMOD_MCP_COLLECT_TELEMETRY": "false"
+      }
+    },
+    "bookstore-postgres-catalog": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "postgresql://user:password@localhost:5432/polardb_catalog"
+      }
+    },
+    "bookstore-postgres-order": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "postgresql://user:password@localhost:5433/polardb_order"
+      }
+    },
+    "bookstore-postgres-inventory": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["postgres-mcp", "--access-mode=restricted"],
+      "env": {
+        "DATABASE_URI": "postgresql://user:password@localhost:5434/polardb_inventory"
+      }
+    },
+    "bookstore-redis": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "redis-mcp-server@latest", "redis-mcp-server", "--url", "redis://localhost:6379/0"],
+      "env": {
+        "MCP_REDIS_LOG_LEVEL": "INFO"
+      }
+    },
+    "bookstore-keycloak": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "keycloak-model-context-protocol"],
+      "env": {
+        "KEYCLOAK_URL": "http://localhost:8080",
+        "KEYCLOAK_ADMIN": "user",
+        "KEYCLOAK_ADMIN_PASSWORD": "password"
+      }
+    },
+    "bookstore-kafka": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-kafka"],
+      "env": {
+        "KAFKA_BOOTSTRAP_SERVERS": "localhost:9092"
+      }
+    },
+    "bookstore-elasticsearch": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["elasticsearch-mcp-server-es9"],
+      "env": {
+        "ELASTICSEARCH_HOSTS": "http://localhost:9200"
+      }
     }
   }
 }

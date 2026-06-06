@@ -21,45 +21,60 @@ public class HexagonalArchitectureTest {
     @ArchTest
     static final ArchRule domain_free_of_frameworks =
             noClasses()
-                    .that().resideInAPackage(DOMAIN)
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            "org.springframework..", "jakarta..", "javax..",
-                            "org.elasticsearch..", "co.elastic.clients..",
+                    .that()
+                    .resideInAPackage(DOMAIN)
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(
+                            "org.springframework..",
+                            "jakarta..",
+                            "javax..",
+                            "org.elasticsearch..",
+                            "co.elastic.clients..",
                             "org.springframework.data.elasticsearch..",
                             "org.apache.kafka..");
 
     @ArchTest
     static final ArchRule domain_free_of_adapters =
             noClasses()
-                    .that().resideInAPackage(DOMAIN)
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            ADAPTER_IN, ADAPTER_OUT, CONFIG);
+                    .that()
+                    .resideInAPackage(DOMAIN)
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(ADAPTER_IN, ADAPTER_OUT, CONFIG);
 
     @ArchTest
     static final ArchRule application_free_of_adapters_and_infra =
             noClasses()
-                    .that().resideInAPackage(APPLICATION)
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            ADAPTER_IN, ADAPTER_OUT, CONFIG);
+                    .that()
+                    .resideInAPackage(APPLICATION)
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(ADAPTER_IN, ADAPTER_OUT, CONFIG);
 
     @ArchTest
     static final ArchRule ports_are_interfaces =
             classes()
-                    .that().resideInAnyPackage(
-                            "..application.in..", "..application.out..")
-                    .should().beInterfaces();
+                    .that()
+                    .resideInAnyPackage("..application.in..", "..application.out..")
+                    .should()
+                    .beInterfaces();
 
     @ArchTest
     static final ArchRule domain_not_accessed_by_adapters =
             classes()
-                    .that().resideInAPackage(DOMAIN)
-                    .should().onlyBeAccessed().byAnyPackage(
-                            DOMAIN, APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG);
+                    .that()
+                    .resideInAPackage(DOMAIN)
+                    .should()
+                    .onlyBeAccessed()
+                    .byAnyPackage(DOMAIN, APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG);
 
     @ArchTest
     static final ArchRule application_not_accessed_by_domain_or_config =
             classes()
-                    .that().resideInAPackage(APPLICATION)
-                    .should().onlyBeAccessed().byAnyPackage(
-                            APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG);
+                    .that()
+                    .resideInAPackage(APPLICATION)
+                    .should()
+                    .onlyBeAccessed()
+                    .byAnyPackage(APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG);
 }

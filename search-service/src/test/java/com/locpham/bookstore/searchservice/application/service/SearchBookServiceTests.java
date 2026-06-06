@@ -63,4 +63,108 @@ class SearchBookServiceTests {
                 .expectNext("Spring Boot")
                 .verifyComplete();
     }
+
+    @Test
+    void searchByPublisherDelegatesToPort() {
+        var pageable = PageRequest.of(0, 10);
+        var page = SearchPage.of(List.of(book), 0, 10, 1L);
+        given(searchQuery.searchByPublisher("Pub", pageable)).willReturn(Mono.just(page));
+
+        StepVerifier.create(service.searchByPublisher("Pub", pageable))
+                .expectNext(page)
+                .verifyComplete();
+    }
+
+    @Test
+    void searchByIsbnDelegatesToPort() {
+        var pageable = PageRequest.of(0, 10);
+        var page = SearchPage.of(List.of(book), 0, 10, 1L);
+        given(searchQuery.searchByIsbn("1234567890", pageable)).willReturn(Mono.just(page));
+
+        StepVerifier.create(service.searchByIsbn("1234567890", pageable))
+                .expectNext(page)
+                .verifyComplete();
+    }
+
+    @Test
+    void suggestByAuthorDelegatesToPort() {
+        given(searchQuery.suggestByAuthor("Aut")).willReturn(Flux.just("Author"));
+
+        StepVerifier.create(service.suggestByAuthor("Aut")).expectNext("Author").verifyComplete();
+    }
+
+    @Test
+    void searchByTitlePropagatesError() {
+        var pageable = PageRequest.of(0, 10);
+        given(searchQuery.searchByTitle("x", pageable))
+                .willReturn(Mono.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.search("x", pageable))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void searchByAuthorPropagatesError() {
+        var pageable = PageRequest.of(0, 10);
+        given(searchQuery.searchByAuthor("x", pageable))
+                .willReturn(Mono.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.searchByAuthor("x", pageable))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void searchByPublisherPropagatesError() {
+        var pageable = PageRequest.of(0, 10);
+        given(searchQuery.searchByPublisher("x", pageable))
+                .willReturn(Mono.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.searchByPublisher("x", pageable))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void searchByIsbnPropagatesError() {
+        var pageable = PageRequest.of(0, 10);
+        given(searchQuery.searchByIsbn("x", pageable))
+                .willReturn(Mono.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.searchByIsbn("x", pageable))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void searchAllPropagatesError() {
+        var pageable = PageRequest.of(0, 10);
+        given(searchQuery.searchAll(pageable))
+                .willReturn(Mono.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.searchAll(pageable))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void suggestByTitlePropagatesError() {
+        given(searchQuery.suggestByTitle("x"))
+                .willReturn(Flux.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.suggestByTitle("x"))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void suggestByAuthorPropagatesError() {
+        given(searchQuery.suggestByAuthor("x"))
+                .willReturn(Flux.error(new RuntimeException("es down")));
+
+        StepVerifier.create(service.suggestByAuthor("x"))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
 }

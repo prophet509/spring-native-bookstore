@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -24,6 +25,7 @@ class ProcessInventoryDecisionServiceTest {
     @Mock private OrderQueryPort orderQueryPort;
     @Mock private OrderCommandPort orderCommandPort;
     @Mock private OrderEventPublisherPort orderEventPublisherPort;
+    @Mock private TransactionalOperator transactionalOperator;
 
     @InjectMocks private ProcessInventoryDecisionService service;
 
@@ -32,6 +34,8 @@ class ProcessInventoryDecisionServiceTest {
         var pending = pendingOrder();
 
         given(orderQueryPort.findById(10L)).willReturn(Mono.just(pending));
+        given(transactionalOperator.transactional(any(Mono.class)))
+                .willAnswer(inv -> inv.getArgument(0));
         given(orderCommandPort.save(any())).willAnswer(inv -> Mono.just(inv.getArgument(0)));
         given(orderEventPublisherPort.publishOrderAccepted(any())).willReturn(Mono.empty());
 

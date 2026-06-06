@@ -61,6 +61,8 @@ spec:
               value: "none"
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "polar-kafka:19092"
+            - name: REDIS_HOST
+              value: "polar-redis"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://polar-postgres:5432/polardb_catalog"
             - name: SPRING_DATASOURCE_USERNAME

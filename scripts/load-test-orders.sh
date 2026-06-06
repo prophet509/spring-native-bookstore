@@ -9,18 +9,28 @@ CONCURRENCY=${2:-50}
 ISBN="9781617296956"
 ORDER_URL="http://localhost:9002/orders"
 INVENTORY_URL="http://localhost:9004/inventory/${ISBN}"
-KEYCLOAK_URL="http://localhost:8080/realms/PolarBookshop/protocol/openid-connect/token"
+
+# The token MUST be issued with iss=http://polar-keycloak:8080/realms/PolarBookshop because that's
+# what the resource servers validate against (per service.yml SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI).
+# Keycloak derives `iss` from the request host, so a token fetched from `localhost:8080` would have
+# iss=http://localhost:8080/... and be rejected by the apps. To avoid an /etc/hosts entry, we fetch
+# the token from inside the docker network where the host name `polar-keycloak` resolves natively.
+# Override KEYCLOAK_NETWORK if your compose project uses a different name.
+KEYCLOAK_NETWORK="${KEYCLOAK_NETWORK:-polar-network}"
+KEYCLOAK_HOSTPORT="${KEYCLOAK_HOSTPORT:-polar-keycloak:8080}"
+KEYCLOAK_URL="http://${KEYCLOAK_HOSTPORT}/realms/PolarBookshop/protocol/openid-connect/token"
 
 echo "=== Load Test: ${TOTAL} orders, concurrency ${CONCURRENCY} ==="
 
-# 1. Get token
-echo "[1/4] Getting access token..."
-TOKEN=$(curl -sf -X POST "$KEYCLOAK_URL" \
+# 1. Get token (in-network so iss matches the configured issuer of the resource servers).
+echo "[1/4] Getting access token via ${KEYCLOAK_NETWORK} -> ${KEYCLOAK_HOSTPORT}..."
+TOKEN="${TOKEN:-$(docker run --rm --network "$KEYCLOAK_NETWORK" curlimages/curl:latest \
+  -sf -X POST "$KEYCLOAK_URL" \
   -d "grant_type=password" \
   -d "client_id=edge-service" \
   -d "username=bjorn" \
   -d "password=bjorn" \
-  -d "scope=openid roles" | jq -r '.access_token')
+  -d "scope=openid roles" | jq -r '.access_token')}"
 
 if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
   echo "ERROR: Failed to get token"; exit 1

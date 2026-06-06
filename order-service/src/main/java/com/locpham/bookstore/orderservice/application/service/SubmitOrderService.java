@@ -11,6 +11,7 @@ import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -21,14 +22,17 @@ public class SubmitOrderService implements SubmitOrderUseCase {
     private final CatalogBookPort catalogBookPort;
     private final OrderCommandPort orderCommandPort;
     private final OrderEventPublisherPort eventPublisher;
+    private final TransactionalOperator transactionalOperator;
 
     public SubmitOrderService(
             CatalogBookPort catalogBookPort,
             OrderCommandPort orderCommandPort,
-            OrderEventPublisherPort eventPublisher) {
+            OrderEventPublisherPort eventPublisher,
+            TransactionalOperator transactionalOperator) {
         this.catalogBookPort = catalogBookPort;
         this.orderCommandPort = orderCommandPort;
         this.eventPublisher = eventPublisher;
+        this.transactionalOperator = transactionalOperator;
     }
 
     @Override
@@ -53,16 +57,25 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                                     .addKeyValue("status", order.status())
                                     .addKeyValue("createdBy", command.createdBy())
                                     .log("Persisting order");
-                            return orderCommandPort.save(order);
+                            return transactionalOperator.transactional(
+                                    orderCommandPort
+                                            .save(order)
+                                            .doOnNext(
+                                                    saved ->
+                                                            log.atInfo()
+                                                                    .addKeyValue(
+                                                                            "orderId", saved.id())
+                                                                    .addKeyValue(
+                                                                            "isbn", command.isbn())
+                                                                    .addKeyValue(
+                                                                            "status",
+                                                                            saved.status())
+                                                                    .log("Order persisted"))
+                                            .flatMap(
+                                                    saved ->
+                                                            publishOrderCreatedIfPending(
+                                                                    saved, command.isbn())));
                         })
-                .doOnNext(
-                        order ->
-                                log.atInfo()
-                                        .addKeyValue("orderId", order.id())
-                                        .addKeyValue("isbn", command.isbn())
-                                        .addKeyValue("status", order.status())
-                                        .log("Order persisted"))
-                .flatMap(order -> publishOrderCreatedIfPending(order, command.isbn()))
                 .doOnError(
                         e ->
                                 log.atError()

@@ -30,7 +30,6 @@ spring:
     function:
       definition: reserveStock;releaseStock
     stream:
-      source: inventoryDecision
       bindings:
         reserveStock-in-0:
           destination: order-created-events
@@ -38,16 +37,15 @@ spring:
         releaseStock-in-0:
           destination: order-cancelled-events
           group: ${spring.application.name}
-        inventoryDecision-out-0:
-          destination: inventory-events
   r2dbc:
     url: r2dbc:postgresql://localhost:5434/polardb_inventory
     username: user
     password: password
     pool:
-      max-size: 10
-      initial-size: 2
+      max-size: 100
+      initial-size: 10
       max-create-connection-time: 2s
+      max-acquire-time: 5s
   flyway:
     user: ${spring.r2dbc.username}
     password: ${spring.r2dbc.password}

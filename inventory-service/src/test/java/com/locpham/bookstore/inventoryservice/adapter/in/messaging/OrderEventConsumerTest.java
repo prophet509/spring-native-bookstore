@@ -2,11 +2,10 @@ package com.locpham.bookstore.inventoryservice.adapter.in.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.locpham.bookstore.inventoryservice.InventoryServiceApplication;
 import com.locpham.bookstore.inventoryservice.TestcontainersConfiguration;
 import com.locpham.bookstore.inventoryservice.adapter.in.messaging.messages.OrderCancelledMessage;
 import com.locpham.bookstore.inventoryservice.adapter.in.messaging.messages.OrderCreatedMessage;
-import com.locpham.bookstore.inventoryservice.adapter.out.messaging.messages.InventoryDecisionMessage;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.JooqInventoryRepositoryImpl;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.JooqReservationRepositoryImpl;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
@@ -15,15 +14,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import org.junit.jupiter.api.BeforeEach;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.stream.binder.test.OutputDestination;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.annotation.Import;
-import org.springframework.messaging.Message;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -31,16 +28,26 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+/**
+ * Verifies the inventory reserve/release consumer flows after the legacy-publish cutover. The
+ * outbound side (decision publish) now writes to {@code outbox_event} via the transactional outbox
+ * publisher, not Kafka — so this test asserts an outbox row appears, rather than reading from a
+ * test channel binder.
+ *
+ * <p>Idempotency on redelivery is covered separately by {@code IdempotentConsumerIT} so this test
+ * focuses on (a) reserve happy path and (b) release flow.
+ */
 @SpringBootTest(
+        classes = InventoryServiceApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = "spring.cloud.stream.defaultBinder=test")
-@Import({TestcontainersConfiguration.class, TestChannelBinderConfiguration.class})
+        properties = {"spring.cloud.config.enabled=false", "spring.cloud.stream.enabled=false"})
+@Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
 class OrderEventConsumerTest {
 
-    @Autowired private OutputDestination output;
     @Autowired private JooqInventoryRepositoryImpl inventoryRepository;
     @Autowired private JooqReservationRepositoryImpl reservationRepository;
+    @Autowired private DSLContext dsl;
 
     @Autowired
     @Qualifier("reserveStock")
@@ -52,126 +59,19 @@ class OrderEventConsumerTest {
 
     @MockitoBean private ReactiveJwtDecoder jwtDecoder;
 
-    private ObjectMapper objectMapper;
-
-    @BeforeEach
-    void setUp() {
-        this.objectMapper = new ObjectMapper();
-        drainOutput("inventory-events");
-        drainOutput("order-created-events");
-        drainOutput("order-cancelled-events");
-    }
-
-    private void drainOutput(String bindingName) {
-        Message<byte[]> message;
-        do {
-            message = output.receive(0, bindingName);
-        } while (message != null);
-    }
-
-    private Mono<InventoryItem> awaitStock(String isbn, int available, int reserved) {
-        // Guard each DB read so a transient stalled connection doesn't hang the whole await.
-        return Mono.defer(() -> inventoryRepository.findByIsbn(isbn).timeout(Duration.ofSeconds(1)))
-                .filter(
-                        updated ->
-                                updated.availableQuantity() == available
-                                        && updated.reservedQuantity() == reserved)
-                .repeatWhenEmpty(repeat -> repeat.delayElements(Duration.ofMillis(200)))
-                .timeout(Duration.ofSeconds(30));
-    }
-
     @Test
-    void orderCreated_shouldReserveAndPublishDecision() throws Exception {
+    void orderCreated_shouldReserveAndAppendOutboxDecision() {
         var isbn = "ABC-" + UUID.randomUUID();
         inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
-        var orderId = 1L;
+        var orderId = System.nanoTime();
         var message =
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
 
         reserveStock.accept(Flux.just(message));
 
-        var out = output.receive(5000, "inventory-events");
-        assertThat(out).isNotNull();
-
-        var decisionMessage =
-                objectMapper.readValue(out.getPayload(), InventoryDecisionMessage.class);
-        assertThat(decisionMessage.orderId()).isEqualTo(orderId);
-        assertThat(decisionMessage.status()).isEqualTo("RESERVED");
-
-        StepVerifier.create(inventoryRepository.findByIsbn(isbn))
-                .assertNext(
-                        updated -> {
-                            assertThat(updated.availableQuantity()).isEqualTo(8);
-                            assertThat(updated.reservedQuantity()).isEqualTo(2);
-                        })
-                .verifyComplete();
-    }
-
-    @Test
-    void orderCreated_duplicate_shouldNotDoubleDecrementStock() throws Exception {
-        inventoryRepository.save(InventoryItem.create("DUP", 10)).block();
-
-        var orderId = 2L;
-        var message =
-                new OrderCreatedMessage(
-                        orderId, List.of(new OrderCreatedMessage.OrderItem("DUP", 2)));
-
-        reserveStock.accept(Flux.just(message));
-        var first = output.receive(5000, "inventory-events");
-        assertThat(first).isNotNull();
-        drainOutput("inventory-events");
-
-        var firstDecision =
-                objectMapper.readValue(first.getPayload(), InventoryDecisionMessage.class);
-        assertThat(firstDecision.orderId()).isEqualTo(orderId);
-        assertThat(firstDecision.status()).isEqualTo("RESERVED");
-
-        StepVerifier.create(awaitStock("DUP", 8, 2))
-                .assertNext(
-                        updated -> {
-                            assertThat(updated.availableQuantity()).isEqualTo(8);
-                            assertThat(updated.reservedQuantity()).isEqualTo(2);
-                        })
-                .verifyComplete();
-
-        reserveStock.accept(Flux.just(message));
-
-        // Duplicate events must be idempotent at the state level (inventory must not decrement
-        // twice). Re-publishing the same decision event is acceptable depending on retries.
-        var maybeDuplicateDecision = output.receive(1500, "inventory-events");
-        if (maybeDuplicateDecision != null) {
-            var decision =
-                    objectMapper.readValue(
-                            maybeDuplicateDecision.getPayload(), InventoryDecisionMessage.class);
-            assertThat(decision.orderId()).isEqualTo(orderId);
-            assertThat(decision.status()).isEqualTo("RESERVED");
-        }
-
-        StepVerifier.create(inventoryRepository.findByIsbn("DUP").timeout(Duration.ofSeconds(5)))
-                .assertNext(
-                        updated -> {
-                            assertThat(updated.availableQuantity()).isEqualTo(8);
-                            assertThat(updated.reservedQuantity()).isEqualTo(2);
-                        })
-                .verifyComplete();
-    }
-
-    @Test
-    void orderCancelled_shouldReleaseStockAndUpdateReservationStatus() throws Exception {
-        var isbn = "ABC-" + UUID.randomUUID();
-        inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
-
-        var orderId = 3L;
-
-        // Act: Send order-created event
-        var createMessage =
-                new OrderCreatedMessage(
-                        orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
-        reserveStock.accept(Flux.just(createMessage));
-
-        // Verify stock đã được reserve
+        // Stock decremented + outbox row appended (atomic).
         StepVerifier.create(awaitStock(isbn, 8, 2))
                 .assertNext(
                         updated -> {
@@ -180,13 +80,32 @@ class OrderEventConsumerTest {
                         })
                 .verifyComplete();
 
-        drainOutput("inventory-events"); // clean decision
+        StepVerifier.create(awaitOutbox(orderId, "InventoryDecision", "inventory-events"))
+                .assertNext(count -> assertThat(count).isEqualTo(1))
+                .verifyComplete();
+    }
 
-        // Act: Send order-cancelled event
-        var cancelMessage = new OrderCancelledMessage(orderId);
-        releaseStock.accept(Flux.just(cancelMessage));
+    @Test
+    void orderCancelled_shouldReleaseStockAndUpdateReservationStatus() {
+        var isbn = "ABC-" + UUID.randomUUID();
+        inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
-        // Assert wait for invetory release
+        var orderId = System.nanoTime();
+        reserveStock.accept(
+                Flux.just(
+                        new OrderCreatedMessage(
+                                orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)))));
+
+        StepVerifier.create(awaitStock(isbn, 8, 2))
+                .assertNext(
+                        updated -> {
+                            assertThat(updated.availableQuantity()).isEqualTo(8);
+                            assertThat(updated.reservedQuantity()).isEqualTo(2);
+                        })
+                .verifyComplete();
+
+        releaseStock.accept(Flux.just(new OrderCancelledMessage(orderId)));
+
         StepVerifier.create(awaitStock(isbn, 10, 0))
                 .assertNext(
                         updated -> {
@@ -195,12 +114,40 @@ class OrderEventConsumerTest {
                         })
                 .verifyComplete();
 
-        // Assert is released
         StepVerifier.create(reservationRepository.findByOrderId(orderId))
-                .assertNext(
-                        r -> {
-                            assertThat(r.status()).isEqualTo(ReservationStatus.RELEASED);
-                        })
+                .assertNext(r -> assertThat(r.status()).isEqualTo(ReservationStatus.RELEASED))
                 .verifyComplete();
+    }
+
+    private Mono<InventoryItem> awaitStock(String isbn, int available, int reserved) {
+        return Mono.defer(() -> inventoryRepository.findByIsbn(isbn).timeout(Duration.ofSeconds(1)))
+                .filter(
+                        updated ->
+                                updated.availableQuantity() == available
+                                        && updated.reservedQuantity() == reserved)
+                .repeatWhenEmpty(repeat -> repeat.delayElements(Duration.ofMillis(200)))
+                .timeout(Duration.ofSeconds(15));
+    }
+
+    private Mono<Integer> awaitOutbox(Long orderId, String type, String destination) {
+        return Mono.defer(
+                        () ->
+                                Mono.from(
+                                                dsl.selectCount()
+                                                        .from(DSL.table(DSL.name("outbox_event")))
+                                                        .where(DSL.field(DSL.name("type")).eq(type))
+                                                        .and(
+                                                                DSL.field(DSL.name("destination"))
+                                                                        .eq(destination))
+                                                        .and(
+                                                                DSL.field(DSL.name("aggregate_id"))
+                                                                        .eq(
+                                                                                String.valueOf(
+                                                                                        orderId))))
+                                        .map(record -> record.value1())
+                                        .timeout(Duration.ofSeconds(1)))
+                .filter(count -> count > 0)
+                .repeatWhenEmpty(repeat -> repeat.delayElements(Duration.ofMillis(200)))
+                .timeout(Duration.ofSeconds(15));
     }
 }

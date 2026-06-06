@@ -8,6 +8,7 @@ import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -19,14 +20,17 @@ public class ProcessInventoryDecisionService implements ProcessInventoryDecision
     private final OrderQueryPort orderQueryPort;
     private final OrderCommandPort orderCommandPort;
     private final OrderEventPublisherPort orderEventPublisherPort;
+    private final TransactionalOperator transactionalOperator;
 
     public ProcessInventoryDecisionService(
             OrderQueryPort orderQueryPort,
             OrderCommandPort orderCommandPort,
-            OrderEventPublisherPort orderEventPublisherPort) {
+            OrderEventPublisherPort orderEventPublisherPort,
+            TransactionalOperator transactionalOperator) {
         this.orderQueryPort = orderQueryPort;
         this.orderCommandPort = orderCommandPort;
         this.orderEventPublisherPort = orderEventPublisherPort;
+        this.transactionalOperator = transactionalOperator;
     }
 
     @Override
@@ -52,16 +56,19 @@ public class ProcessInventoryDecisionService implements ProcessInventoryDecision
                             }
 
                             return switch (status) {
-                                case RESERVED -> orderCommandPort
-                                        .save(order.accept())
-                                        .doOnSuccess(
-                                                o ->
-                                                        log.info(
-                                                                "Order accepted orderId={} status={}",
-                                                                orderId,
-                                                                o.status()))
-                                        .flatMap(orderEventPublisherPort::publishOrderAccepted)
-                                        .then();
+                                case RESERVED -> transactionalOperator.transactional(
+                                        orderCommandPort
+                                                .save(order.accept())
+                                                .doOnSuccess(
+                                                        o ->
+                                                                log.info(
+                                                                        "Order accepted orderId={} status={}",
+                                                                        orderId,
+                                                                        o.status()))
+                                                .flatMap(
+                                                        orderEventPublisherPort
+                                                                ::publishOrderAccepted)
+                                                .then());
                                 case REJECTED -> orderCommandPort
                                         .save(order.reject())
                                         .doOnSuccess(

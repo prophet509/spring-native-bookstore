@@ -21,8 +21,13 @@ import reactor.util.retry.Retry;
 public class OrderEventConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderEventConsumer.class);
+    // Under heavy concurrent load every reservation contends on the same inventory row, so
+    // optimistic-lock conflicts are frequent. Retry generously with a capped backoff + jitter so
+    // losers eventually win without a thundering herd.
     private static final Retry OPTIMISTIC_LOCK_RETRY =
-            Retry.backoff(3, Duration.ofMillis(100))
+            Retry.backoff(10, Duration.ofMillis(50))
+                    .maxBackoff(Duration.ofMillis(500))
+                    .jitter(0.5)
                     .filter(throwable -> throwable instanceof OptimisticLockingFailureException);
 
     @Bean

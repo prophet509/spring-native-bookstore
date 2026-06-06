@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -27,16 +28,19 @@ public class ReserveStockService implements ReserveStockUseCase {
     private final ReservationPort reservationPort;
     private final InventoryEventPublisher eventPublisher;
     private final ReactiveRedisTemplate<String, String> redisTemplate;
+    private final TransactionalOperator transactionalOperator;
 
     public ReserveStockService(
             InventoryPort inventoryPort,
             ReservationPort reservationPort,
             InventoryEventPublisher eventPublisher,
-            ReactiveRedisTemplate<String, String> redisTemplate) {
+            ReactiveRedisTemplate<String, String> redisTemplate,
+            TransactionalOperator transactionalOperator) {
         this.inventoryPort = inventoryPort;
         this.reservationPort = reservationPort;
         this.eventPublisher = eventPublisher;
         this.redisTemplate = redisTemplate;
+        this.transactionalOperator = transactionalOperator;
     }
 
     @Override
@@ -55,8 +59,8 @@ public class ReserveStockService implements ReserveStockUseCase {
 
         return checkRedisIdempotency(request.orderId())
                 .flatMap(
-                        alreadyReserved -> {
-                            if (alreadyReserved) {
+                        claimed -> {
+                            if (Boolean.FALSE.equals(claimed)) {
                                 return Mono.just(InventoryDecision.reserved(request.orderId()));
                             }
                             return doReserve(request, isbns);
@@ -72,7 +76,7 @@ public class ReserveStockService implements ReserveStockUseCase {
                             logger.warn(
                                     "Redis idempotency check failed for orderId={}, fallback to DB",
                                     orderId);
-                            return Mono.just(false);
+                            return Mono.just(true);
                         });
     }
 
@@ -88,7 +92,8 @@ public class ReserveStockService implements ReserveStockUseCase {
                                         .log("Reservation already exists — idempotent return");
                                 return Mono.just(InventoryDecision.reserved(request.orderId()));
                             }
-                            return reserveAvailableStock(request, isbns);
+                            return transactionalOperator.transactional(
+                                    reserveAvailableStock(request, isbns));
                         })
                 .onErrorResume(
                         InsufficientStockException.class,
@@ -98,8 +103,9 @@ public class ReserveStockService implements ReserveStockUseCase {
                                     .log(() -> "Stock reservation REJECTED: " + e.getMessage());
                             InventoryDecision rejected =
                                     InventoryDecision.rejected(request.orderId(), e.getMessage());
-                            return eventPublisher
-                                    .publishInventoryDecision(rejected)
+                            return transactionalOperator
+                                    .transactional(
+                                            eventPublisher.publishInventoryDecision(rejected))
                                     .thenReturn(rejected);
                         });
     }

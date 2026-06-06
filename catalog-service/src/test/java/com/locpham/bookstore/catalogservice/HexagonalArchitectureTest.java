@@ -24,49 +24,63 @@ public class HexagonalArchitectureTest {
     @ArchTest
     static final ArchRule domain_free_of_frameworks =
             noClasses()
-                    .that().resideInAPackage(DOMAIN)
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            "org.springframework..", "jakarta..", "javax..",
-                            "java.sql..", "org.flywaydb..", "com.zaxxer.hikari..",
-                            "org.springframework.jdbc..", "org.springframework.data.jdbc..");
+                    .that()
+                    .resideInAPackage(DOMAIN)
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(
+                            "org.springframework..",
+                            "jakarta..",
+                            "javax..",
+                            "java.sql..",
+                            "org.flywaydb..",
+                            "com.zaxxer.hikari..",
+                            "org.springframework.jdbc..",
+                            "org.springframework.data.jdbc..");
 
     @ArchTest
     static final ArchRule domain_free_of_adapters =
             noClasses()
-                    .that().resideInAPackage(DOMAIN)
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
+                    .that()
+                    .resideInAPackage(DOMAIN)
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
 
     // ── Application isolation ─────────────────────────────────────────────────
 
     @ArchTest
     static final ArchRule application_free_of_adapters_and_infra =
             noClasses()
-                    .that().resideInAPackage(APPLICATION)
-                    .should().dependOnClassesThat().resideInAnyPackage(
-                            ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
+                    .that()
+                    .resideInAPackage(APPLICATION)
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
 
     // ── Port interfaces ───────────────────────────────────────────────────────
 
     @ArchTest
     static final ArchRule ports_are_interfaces =
-            classes()
-                    .that().resideInAPackage("..port..")
-                    .should().beInterfaces();
+            classes().that().resideInAPackage("..port..").should().beInterfaces();
 
     // ── Dependency direction ──────────────────────────────────────────────────
 
     @ArchTest
     static final ArchRule domain_not_accessed_by_adapters =
             classes()
-                    .that().resideInAPackage(DOMAIN)
-                    .should().onlyBeAccessed().byAnyPackage(
-                            DOMAIN, APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
+                    .that()
+                    .resideInAPackage(DOMAIN)
+                    .should()
+                    .onlyBeAccessed()
+                    .byAnyPackage(DOMAIN, APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
 
     @ArchTest
     static final ArchRule application_not_accessed_by_domain_or_config =
             classes()
-                    .that().resideInAPackage(APPLICATION)
-                    .should().onlyBeAccessed().byAnyPackage(
-                            APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
+                    .that()
+                    .resideInAPackage(APPLICATION)
+                    .should()
+                    .onlyBeAccessed()
+                    .byAnyPackage(APPLICATION, ADAPTER_IN, ADAPTER_OUT, CONFIG, DEMO);
 }

@@ -4,12 +4,14 @@ import com.locpham.bookstore.orderservice.adapter.out.catalog.CatalogWebClientAd
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 public class CatalogClientConfig {
 
     @Bean
+    @Profile("http-fallback")
     public CatalogWebClientAdapter catalogWebClientAdapter(
             WebClient.Builder webClientBuilder,
             @Value("${polar.catalog-service-url}") String catalogServiceUrl) {

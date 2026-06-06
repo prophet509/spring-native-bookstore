@@ -5,10 +5,12 @@ import com.locpham.bookstore.orderservice.application.port.out.CatalogBookSnapsh
 import com.locpham.bookstore.orderservice.domain.model.BookSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 @Component
+@Profile("!http-fallback")
 public class SnapshotBookAdapter implements CatalogBookPort {
 
     private static final Logger log = LoggerFactory.getLogger(SnapshotBookAdapter.class);

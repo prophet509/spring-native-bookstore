@@ -42,14 +42,28 @@ All services run via Docker Compose (`polar-deployment/docker/docker-compose.yml
 
 ---
 
-## Code Intelligence (MCP)
-1. **CodeGraph**: Indexed structural relationships.
+## Code Intelligence & Platform (MCP)
+*12 servers, identical across all CLIs. Configs: `opencode.json`, `.mcp.json`, `.kiro/settings/mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`; templates in `mcp/` (Codex/Claude Desktop/Windsurf). Setup: `mcp/README.md`. Start platform first: `make infra-up`.*
+
+### Code intelligence
+1. **codegraph**: Indexed structural relationships.
    * `codegraph_search` (find), `codegraph_callers` / `codegraph_callees` (flow)
    * `codegraph_trace` (path between nodes), `codegraph_impact` (impact before change)
    * `codegraph_explore` (source of multiple nodes)
    * Rule: No edit without `codegraph_impact` check first! Report blast radius.
-2. **Code-Review-Graph (CRG)**: persistent code review graph. Command: `uvx code-review-graph serve`. Rebuild: `uvx code-review-graph build`.
-3. **Claude-Mem**: Session long-term memory. Command: `node /Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs`.
+2. **code-review-graph** (CRG): persistent code review graph. `uvx code-review-graph serve`. Rebuild: `uvx code-review-graph build`.
+3. **claude-mem**: Session long-term memory. `node /Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs`.
+4. **java-lsp**: Java symbol nav, diagnostics, rename previews, hover/type, call/type hierarchy. Needs `jls` on PATH (`mcp/lsp-mcp.json`); else fall back to codegraph + Gradle.
+5. **java-app-modernization**: Java/Spring upgrade & migration analysis only. Telemetry off (`APPMOD_MCP_COLLECT_TELEMETRY=false`).
+
+### Platform inspection (need `make infra-up`)
+6. **bookstore-postgres-catalog** (`:5432`), 7. **bookstore-postgres-order** (`:5433`), 8. **bookstore-postgres-inventory** (`:5434`): `postgres-mcp --access-mode=restricted` (read-only).
+9. **bookstore-redis** (`:6379`): cache/session/idempotency inspection.
+10. **bookstore-keycloak** (`:8080`): realms/clients/roles admin.
+11. **bookstore-kafka** (`:9092`): topics, consume/produce, consumer groups (read-only by default).
+12. **bookstore-elasticsearch** (`:9200`): indices, mappings, search, ES|QL.
+
+* Rule: prefer codegraph for code, the matching DB server for persistence questions, kafka for event-flow, before reading raw files.
 
 ---
 

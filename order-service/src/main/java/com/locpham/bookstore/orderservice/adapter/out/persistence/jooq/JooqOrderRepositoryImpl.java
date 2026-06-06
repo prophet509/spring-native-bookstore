@@ -23,8 +23,12 @@ public class JooqOrderRepositoryImpl implements OrderCommandPort, OrderQueryPort
     public Mono<Order> save(Order order) {
         var record = JooqOrderMapper.toRecord(order);
 
+        // Use Flux.from(...).singleOrEmpty() (not Mono.from) so the jOOQ publisher completes
+        // naturally. Mono.from cancels after the first row, which makes r2dbc-pool reclaim the
+        // transactional connection mid-transaction -> the following outbox insert then fails with
+        // "Connection handle already closed".
         if (order.id() == null) {
-            return Mono.from(
+            return Flux.from(
                             dsl.insertInto(ORDERS)
                                     .set(ORDERS.BOOK_ISBN, record.getBookIsbn())
                                     .set(ORDERS.BOOK_NAME, record.getBookName())
@@ -37,9 +41,10 @@ public class JooqOrderRepositoryImpl implements OrderCommandPort, OrderQueryPort
                                     .set(ORDERS.LAST_MODIFIED_BY, record.getLastModifiedBy())
                                     .set(ORDERS.VERSION, record.getVersion())
                                     .returning(ORDERS.fields()))
+                    .singleOrEmpty()
                     .map(JooqOrderMapper::toDomain);
         } else {
-            return Mono.from(
+            return Flux.from(
                             dsl.update(ORDERS)
                                     .set(ORDERS.STATUS, record.getStatus())
                                     .set(ORDERS.LAST_MODIFIED_DATE, record.getLastModifiedDate())
@@ -48,6 +53,7 @@ public class JooqOrderRepositoryImpl implements OrderCommandPort, OrderQueryPort
                                     .where(ORDERS.ID.eq(order.id()))
                                     .and(ORDERS.VERSION.eq(order.version() - 1))
                                     .returning(ORDERS.fields()))
+                    .singleOrEmpty()
                     .map(JooqOrderMapper::toDomain);
         }
     }

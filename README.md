@@ -244,6 +244,26 @@ Dependencies (Docker Compose defaults under `polar-deployment/docker/docker-comp
 - Tempo (OTLP gRPC): `4317`
 - Fluent Bit: `24224`
 
+## MCP (Model Context Protocol)
+
+This repo ships a shared set of 12 MCP servers so AI coding assistants can inspect the codebase
+and the running platform (Postgres, Redis, Kafka, Elasticsearch, Keycloak). All supported CLIs are
+configured with the same servers.
+
+| CLI | Config file | Pre-configured |
+|-----|-------------|----------------|
+| OpenCode | `opencode.json` | yes |
+| Claude Code | `.mcp.json` | yes |
+| Kiro | `.kiro/settings/mcp.json` | yes |
+| Cursor | `.cursor/mcp.json` | yes |
+| VS Code | `.vscode/mcp.json` | yes |
+| Codex | `~/.codex/config.toml` | template: `mcp/codex_config.toml` |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | template: `mcp/claude_desktop_config.json` |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` | template: `mcp/windsurf_mcp_config.json` |
+
+Start the platform first (`make infra-up`) so the database/broker servers can connect. See
+[`mcp/README.md`](mcp/README.md) for the full server list and per-CLI setup steps.
+
 ## CI/CD
 
 GitHub Actions workflow definitions are in `.github/workflows/`:

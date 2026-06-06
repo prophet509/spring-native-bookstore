@@ -8,13 +8,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.locpham.bookstore.orderservice.adapter.in.messaging.InventoryDecisionMessage;
 import com.locpham.bookstore.orderservice.adapter.in.messaging.OrderDispatchedMessage;
 import com.locpham.bookstore.orderservice.adapter.in.web.dto.OrderRequest;
-import com.locpham.bookstore.orderservice.adapter.out.messaging.OrderAcceptedMessage;
-import com.locpham.bookstore.orderservice.adapter.out.messaging.OrderCreatedMessage;
 import com.locpham.bookstore.orderservice.application.port.out.OrderQueryPort;
 import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import java.io.IOException;
+import java.time.Duration;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
-import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
@@ -31,16 +31,24 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+/**
+ * End-to-end test for the order saga. After the legacy-publish cutover the publish path is
+ * Debezium-tailing-the-outbox, so this test asserts <em>outbox_event</em> rows instead of Kafka
+ * channel output. Inbound messages still flow through Spring Cloud Stream's test binder.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({TestcontainersConfiguration.class, TestChannelBinderConfiguration.class})
 @Testcontainers(disabledWithoutDocker = true)
+@ActiveProfiles("http-fallback")
 class OrderServiceApplicationTests {
 
     private static MockWebServer mockWebServer;
@@ -48,7 +56,7 @@ class OrderServiceApplicationTests {
     @Autowired private ApplicationContext context;
     @Autowired private OrderQueryPort orderQueryPort;
     @Autowired private InputDestination input;
-    @Autowired private OutputDestination output;
+    @Autowired private DSLContext dsl;
     private ObjectMapper objectMapper;
 
     @MockitoBean private ReactiveJwtDecoder reactiveJwtDecoder;
@@ -68,7 +76,7 @@ class OrderServiceApplicationTests {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
-        registry.add("polar.catalogServiceUrl", () -> mockWebServer.url("/").toString());
+        registry.add("polar.catalog-service-url", () -> mockWebServer.url("/").toString());
     }
 
     @BeforeEach
@@ -98,7 +106,7 @@ class OrderServiceApplicationTests {
                         """);
         mockWebServer.enqueue(mockResponse);
 
-        // Submit order
+        // 1. Submit order
         webClient
                 .mutateWith(
                         mockJwt()
@@ -111,15 +119,12 @@ class OrderServiceApplicationTests {
                 .expectStatus()
                 .isOk();
 
-        // Verify order.created published
-        var createdMessage = output.receive(5000, "orderCreated-out-0");
-        assertThat(createdMessage).isNotNull();
+        // 2. Verify exactly one OrderCreated row was written to the outbox (atomic with the
+        // order save). The aggregate_id is the order id assigned by the DB.
+        Long orderId = awaitOutboxRow("OrderCreated", "order-created-events");
+        assertThat(orderId).isNotNull();
 
-        var orderCreated =
-                objectMapper.readValue(createdMessage.getPayload(), OrderCreatedMessage.class);
-        var orderId = orderCreated.orderId();
-
-        // Simulate inventory reserving stock and publishing decision
+        // 3. Simulate inventory reserving stock and publishing the decision back through Kafka.
         var inventoryPayload =
                 objectMapper.writeValueAsBytes(
                         new InventoryDecisionMessage(orderId, "RESERVED", null));
@@ -129,14 +134,11 @@ class OrderServiceApplicationTests {
                         .build(),
                 "handleInventoryDecision-in-0");
 
-        // Verify order.accepted published after inventory RESERVED
-        var acceptedMessage = output.receive(5000, "acceptOrder-out-0");
-        assertThat(acceptedMessage).isNotNull();
+        // 4. Verify OrderAccepted outbox row appears for the same order.
+        Long acceptedOrderId = awaitOutboxRowFor(orderId, "OrderAccepted", "order-accepted");
+        assertThat(acceptedOrderId).isEqualTo(orderId);
 
-        var orderAcceptedMessage =
-                objectMapper.readValue(acceptedMessage.getPayload(), OrderAcceptedMessage.class);
-        assertThat(orderAcceptedMessage.orderId()).isEqualTo(orderId);
-
+        // 5. Simulate dispatch and verify the order moves to DISPATCHED.
         var jsonPayload = objectMapper.writeValueAsBytes(new OrderDispatchedMessage(orderId));
         input.send(
                 MessageBuilder.withPayload(jsonPayload)
@@ -144,15 +146,58 @@ class OrderServiceApplicationTests {
                         .build(),
                 "dispatchOrder-in-0");
 
-        // Verify order status updated (need to give it a brief moment via reactive test)
-        // give it 2 seconds max for the message to be consumed by the stream bridge
         Thread.sleep(2000);
 
         StepVerifier.create(orderQueryPort.findById(orderId))
-                .assertNext(
-                        order -> {
-                            assertThat(order.status()).isEqualTo(OrderStatus.DISPATCHED);
-                        })
+                .assertNext(order -> assertThat(order.status()).isEqualTo(OrderStatus.DISPATCHED))
                 .verifyComplete();
+    }
+
+    /**
+     * Polls the outbox until ANY row of the given (type,destination) appears, returns its order id.
+     */
+    private Long awaitOutboxRow(String type, String destination) {
+        return Mono.defer(
+                        () ->
+                                Mono.from(
+                                        dsl.select(
+                                                        DSL.field(
+                                                                DSL.name("aggregate_id"),
+                                                                String.class))
+                                                .from(DSL.table(DSL.name("outbox_event")))
+                                                .where(DSL.field(DSL.name("type")).eq(type))
+                                                .and(
+                                                        DSL.field(DSL.name("destination"))
+                                                                .eq(destination))
+                                                .orderBy(DSL.field(DSL.name("created_at")).desc())
+                                                .limit(1)))
+                .map(record -> Long.valueOf(record.value1()))
+                .repeatWhenEmpty(repeat -> repeat.delayElements(Duration.ofMillis(200)))
+                .timeout(Duration.ofSeconds(5))
+                .block();
+    }
+
+    /** Polls the outbox until a row of the given (type,destination) for `orderId` appears. */
+    private Long awaitOutboxRowFor(Long orderId, String type, String destination) {
+        return Mono.defer(
+                        () ->
+                                Mono.from(
+                                        dsl.select(
+                                                        DSL.field(
+                                                                DSL.name("aggregate_id"),
+                                                                String.class))
+                                                .from(DSL.table(DSL.name("outbox_event")))
+                                                .where(DSL.field(DSL.name("type")).eq(type))
+                                                .and(
+                                                        DSL.field(DSL.name("destination"))
+                                                                .eq(destination))
+                                                .and(
+                                                        DSL.field(DSL.name("aggregate_id"))
+                                                                .eq(String.valueOf(orderId)))
+                                                .limit(1)))
+                .map(record -> Long.valueOf(record.value1()))
+                .repeatWhenEmpty(repeat -> repeat.delayElements(Duration.ofMillis(200)))
+                .timeout(Duration.ofSeconds(5))
+                .block();
     }
 }

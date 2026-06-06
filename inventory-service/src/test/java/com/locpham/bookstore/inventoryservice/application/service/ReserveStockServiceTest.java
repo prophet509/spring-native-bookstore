@@ -14,11 +14,16 @@ import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import com.locpham.bookstore.inventoryservice.domain.InventoryItem;
 import com.locpham.bookstore.inventoryservice.domain.Reservation;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -32,7 +37,23 @@ class ReserveStockServiceTest {
 
     @Mock private InventoryEventPublisher eventPublisher;
 
+    @Mock private ReactiveRedisTemplate<String, String> redisTemplate;
+
+    @Mock private ReactiveValueOperations<String, String> valueOperations;
+
+    @Mock private TransactionalOperator transactionalOperator;
+
     @InjectMocks private ReserveStockService reserveStockService;
+
+    @BeforeEach
+    @SuppressWarnings("unchecked")
+    void setUp() {
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.setIfAbsent(any(), any(), any())).willReturn(Mono.just(true));
+        Mockito.lenient()
+                .when(transactionalOperator.transactional(any(Mono.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+    }
 
     @Test
     void reserveForOrder_shouldReserveAllItemsAndPublishReserved() {

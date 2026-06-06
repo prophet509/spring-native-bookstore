@@ -23,7 +23,7 @@ SKAFFOLD_FILE := skaffold.yml
 	platform-up platform-down edge-up edge-down k8s-status \
 	cluster-create cluster-delete cluster-down \
 	skaffold-dev skaffold-run skaffold-delete \
-	infra-up infra-down wait-config services-up services-down frontend-up frontend-down compose-up compose-down
+	infra-up infra-down wait-config services-up services-down frontend-up frontend-down compose-up compose-down outbox-cleanup
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nAvailable targets:\n"} /^[a-zA-Z0-9_.-%-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -122,6 +122,17 @@ infra-up: ## Start infrastructure services via Docker Compose (Kafka, Postgres, 
 
 infra-down: ## Stop infrastructure services via Docker Compose
 	cd polar-deployment/docker && docker compose -f docker-compose.yml down
+
+OUTBOX_RETENTION_DAYS ?= 7
+OUTBOX_DBS := polar-postgres-order:polardb_order polar-postgres-inventory:polardb_inventory polar-postgres-catalog:polardb_catalog
+outbox-cleanup: ## Delete outbox_event rows older than OUTBOX_RETENTION_DAYS (default 7) across all 3 DBs
+	@for spec in $(OUTBOX_DBS); do \
+		container=$${spec%%:*}; db=$${spec##*:}; \
+		echo "[$$container] retention=$(OUTBOX_RETENTION_DAYS)d -> $$db"; \
+		docker exec -i -e PGPASSWORD=password $$container \
+			psql -v ON_ERROR_STOP=1 -v retention_days=$(OUTBOX_RETENTION_DAYS) -U user -d $$db \
+			< polar-deployment/docker/postgres/outbox-retention.sql; \
+	done
 
 wait-config: ## Wait until Config Server is ready for application services
 	@echo "Waiting for Config Server..."

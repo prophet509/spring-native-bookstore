@@ -36,12 +36,6 @@ spring:
         handleInventoryDecision-in-0:
           destination: inventory-events
           group: ${spring.application.name}
-        acceptOrder-out-0:
-          destination: order-accepted
-        orderCreated-out-0:
-          destination: order-created-events
-        orderCancelled-out-0:
-          destination: order-cancelled-events
         handleBookCreated-in-0:
           destination: book.created
           group: ${spring.application.name}
@@ -61,9 +55,10 @@ spring:
     username: user
     password: password
     pool:
-      max-size: 10
-      initial-size: 2
+      max-size: 100
+      initial-size: 10
       max-create-connection-time: 2s
+      max-acquire-time: 5s
   flyway:
     user: ${spring.r2dbc.username}
     password: ${spring.r2dbc.password}

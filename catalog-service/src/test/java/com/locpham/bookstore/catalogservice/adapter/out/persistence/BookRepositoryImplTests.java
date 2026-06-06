@@ -69,4 +69,53 @@ class BookRepositoryImplTests {
         assertThat(exists).isFalse();
         verify(springDataBookRepository).existsByIsbn(isbn);
     }
+
+    @Test
+    void findByIsbnMapsEntityToDomain() {
+        String isbn = "1234567890";
+        var entity = new BookEntity(1L, isbn, "Title", "Author", 9.99, "Pub", null, null, 0);
+        given(springDataBookRepository.findByIsbn(isbn)).willReturn(java.util.Optional.of(entity));
+
+        var book = bookRepository.findByIsbn(isbn);
+
+        assertThat(book).isPresent();
+        assertThat(book.get().isbn()).isEqualTo(isbn);
+        assertThat(book.get().title()).isEqualTo("Title");
+    }
+
+    @Test
+    void findAllMapsAllEntities() {
+        var entity =
+                new BookEntity(1L, "1234567890", "Title", "Author", 9.99, "Pub", null, null, 0);
+        given(springDataBookRepository.findAll()).willReturn(java.util.List.of(entity));
+
+        var books = bookRepository.findAll();
+
+        assertThat(books).hasSize(1);
+        assertThat(books.iterator().next().isbn()).isEqualTo("1234567890");
+    }
+
+    @Test
+    void saveReturnsPersistedDomain() {
+        var book =
+                com.locpham.bookstore.catalogservice.domain.book.Book.build(
+                        "1234567890", "Title", "Author", 9.99, "Pub");
+        var savedEntity =
+                new BookEntity(1L, "1234567890", "Title", "Author", 9.99, "Pub", null, null, 0);
+        given(springDataBookRepository.save(org.mockito.ArgumentMatchers.any()))
+                .willReturn(savedEntity);
+
+        var saved = bookRepository.save(book);
+
+        assertThat(saved.id()).isEqualTo(1L);
+        assertThat(saved.isbn()).isEqualTo("1234567890");
+        verify(springDataBookRepository).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void deleteByIsbnDelegatesToRepository() {
+        bookRepository.deleteByIsbn("1234567890");
+
+        verify(springDataBookRepository).deleteByIsbn("1234567890");
+    }
 }

@@ -1,30 +1,36 @@
 package com.locpham.bookstore.orderservice.adapter.out.snapshot;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 
+import com.locpham.bookstore.orderservice.application.port.out.CatalogBookSnapshotPort;
+import com.locpham.bookstore.orderservice.domain.model.BookSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.r2dbc.core.DatabaseClient;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 @ExtendWith(MockitoExtension.class)
-public class SnapshotBookAdapterTest {
+class SnapshotBookAdapterTest {
 
-    @Mock private DatabaseClient databaseClient;
+    @Mock private CatalogBookSnapshotPort snapshotPort;
+
+    @InjectMocks private SnapshotBookAdapter adapter;
 
     @Test
-    void whenSnapshotExists_shouldReturnBookSnapshot() {
-        // SnapshotBookAdapter uses DatabaseClient directly — integration test with
-        // Testcontainers is preferred. This test validates the expected behavior
-        // contract: Mono<BookSnapshot> with data when snapshot row exists,
-        // Mono.empty() when it doesn't.
-        assertThat(true).isTrue();
+    void loadBookReturnsSnapshotWhenPresent() {
+        var snapshot = new BookSnapshot("1234567890", "Title", 9.99);
+        given(snapshotPort.findByIsbn("1234567890")).willReturn(Mono.just(snapshot));
+
+        StepVerifier.create(adapter.loadBook("1234567890")).expectNext(snapshot).verifyComplete();
     }
 
     @Test
-    void whenSnapshotMissing_shouldReturnEmptyMono() {
-        // Integration test with Testcontainers preferred.
-        assertThat(true).isTrue();
+    void loadBookCompletesEmptyWhenMissing() {
+        given(snapshotPort.findByIsbn("404")).willReturn(Mono.empty());
+
+        StepVerifier.create(adapter.loadBook("404")).verifyComplete();
     }
 }

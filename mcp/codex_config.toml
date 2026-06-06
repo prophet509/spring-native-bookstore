@@ -1,0 +1,60 @@
+# Codex MCP configuration for spring-native-bookstore.
+# Codex reads MCP servers from ~/.codex/config.toml under [mcp_servers.*] tables.
+# Merge these blocks into that file (or use: codex mcp add ...).
+
+[mcp_servers.codegraph]
+command = "codegraph"
+args = ["serve", "--mcp"]
+
+[mcp_servers.code-review-graph]
+command = "uvx"
+args = ["code-review-graph", "serve"]
+
+[mcp_servers.claude-mem]
+command = "node"
+args = ["/Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs"]
+
+[mcp_servers.java-lsp]
+command = "npx"
+args = ["-y", "lsp-mcp-server"]
+env = { LSP_CONFIG_PATH = "/Users/locpham/Desktop/Workspace/spring-native-bookstore/mcp/lsp-mcp.json", LSP_LOG_LEVEL = "info", LSP_WORKSPACE_ROOT = "/Users/locpham/Desktop/Workspace/spring-native-bookstore" }
+
+[mcp_servers.java-app-modernization]
+command = "npx"
+args = ["-y", "@microsoft/github-copilot-app-modernization-mcp-server@latest"]
+env = { APPMOD_MCP_COLLECT_TELEMETRY = "false" }
+
+[mcp_servers.bookstore-postgres-catalog]
+command = "uvx"
+args = ["postgres-mcp", "--access-mode=restricted"]
+env = { DATABASE_URI = "postgresql://user:password@localhost:5432/polardb_catalog" }
+
+[mcp_servers.bookstore-postgres-order]
+command = "uvx"
+args = ["postgres-mcp", "--access-mode=restricted"]
+env = { DATABASE_URI = "postgresql://user:password@localhost:5433/polardb_order" }
+
+[mcp_servers.bookstore-postgres-inventory]
+command = "uvx"
+args = ["postgres-mcp", "--access-mode=restricted"]
+env = { DATABASE_URI = "postgresql://user:password@localhost:5434/polardb_inventory" }
+
+[mcp_servers.bookstore-redis]
+command = "uvx"
+args = ["--from", "redis-mcp-server@latest", "redis-mcp-server", "--url", "redis://localhost:6379/0"]
+env = { MCP_REDIS_LOG_LEVEL = "INFO" }
+
+[mcp_servers.bookstore-keycloak]
+command = "npx"
+args = ["-y", "keycloak-model-context-protocol"]
+env = { KEYCLOAK_URL = "http://localhost:8080", KEYCLOAK_ADMIN = "user", KEYCLOAK_ADMIN_PASSWORD = "password" }
+
+[mcp_servers.bookstore-kafka]
+command = "uvx"
+args = ["mcp-kafka"]
+env = { KAFKA_BOOTSTRAP_SERVERS = "localhost:9092" }
+
+[mcp_servers.bookstore-elasticsearch]
+command = "uvx"
+args = ["elasticsearch-mcp-server-es9"]
+env = { ELASTICSEARCH_HOSTS = "http://localhost:9200" }

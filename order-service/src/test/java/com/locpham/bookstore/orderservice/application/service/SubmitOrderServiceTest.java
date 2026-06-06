@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -27,8 +28,15 @@ public class SubmitOrderServiceTest {
     @Mock private CatalogBookPort catalogBookPort;
     @Mock private OrderCommandPort orderCommandPort;
     @Mock private OrderEventPublisherPort eventPublisher;
+    @Mock private TransactionalOperator transactionalOperator;
 
     @InjectMocks private SubmitOrderService submitOrderService;
+
+    @SuppressWarnings("unchecked")
+    private void passThroughTransaction() {
+        given(transactionalOperator.transactional(any(Mono.class)))
+                .willAnswer(inv -> inv.getArgument(0));
+    }
 
     @Test
     void whenBookSnapshotExists_shouldSubmitOrder() {
@@ -37,6 +45,7 @@ public class SubmitOrderServiceTest {
         var book = new BookSnapshot(isbn, "Title", 9.99);
         var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
+        passThroughTransaction();
         given(catalogBookPort.loadBook(isbn)).willReturn(Mono.just(book));
         given(orderCommandPort.save(any(Order.class)))
                 .willAnswer(inv -> Mono.just(inv.getArgument(0)));
@@ -61,6 +70,7 @@ public class SubmitOrderServiceTest {
         var createdBy = "isabelle";
         var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
+        passThroughTransaction();
         given(catalogBookPort.loadBook(isbn)).willReturn(Mono.empty());
         given(orderCommandPort.save(any(Order.class)))
                 .willAnswer(inv -> Mono.just(inv.getArgument(0)));
@@ -82,6 +92,7 @@ public class SubmitOrderServiceTest {
         var createdBy = "isabelle";
         var command = new SubmitOrderCommand(isbn, 2, createdBy);
 
+        passThroughTransaction();
         given(catalogBookPort.loadBook(isbn)).willReturn(Mono.empty());
         given(orderCommandPort.save(any(Order.class)))
                 .willAnswer(inv -> Mono.just(inv.getArgument(0)));

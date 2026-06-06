@@ -1,3 +1,16 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        // The org.flywaydb.flyway plugin loads database support via ServiceLoader from its own
+        // classloader, so the postgres module must be on the buildscript classpath (not just the
+        // project runtimeClasspath). Otherwise flywayMigrate fails with
+        // "No Flyway database plugin found to handle jdbc:postgresql".
+        classpath 'org.flywaydb:flyway-database-postgresql:11.14.1'
+    }
+}
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.3'

@@ -23,7 +23,7 @@
 
 | Gap | Why it matters |
 |---|---|
-| Services still depend on Java agent packaging for tracing | creates drift with the newer Spring Boot 4 OTel starter approach already described in `tasks/observability.md` |
+| Services still depend on Java agent packaging for tracing | creates drift with the newer Spring Boot 4 OTel starter approach already described in `docs/tasks/observability.md` |
 | Logging is correlated but not yet structured JSON | harder to query in Loki/Grafana |
 | No durable outbox in `order-service` or `catalog-service` | Kafka outage can still break correctness or create event loss windows |
 | No durable outbound pattern in `inventory-service` | inventory decisions are still direct sends after state changes |
@@ -127,7 +127,7 @@ dispatcher-service
 
 ### 3.2 Recommended implementation choice
 
-Follow the direction already described in `tasks/observability.md`:
+Follow the direction already described in `docs/tasks/observability.md`:
 
 - replace runtime Java agent dependency with Spring Boot 4 OpenTelemetry starter
 - keep Prometheus
@@ -406,7 +406,7 @@ Do not require Redis for correctness. Redis should improve latency and coordinat
 
 ### 7.1 Observability
 
-- `tasks/observability.md`
+- `docs/tasks/observability.md`
 - `config/*-service.yml`
 - `config/*-service-prod.yml`
 - `*/build.gradle`

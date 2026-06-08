@@ -2,7 +2,7 @@
 
 > Muc tieu: bien he thong sau Security thanh he thong production-grade: API loi ro rang, event khong mat khi Kafka loi, consumer an toan voi duplicate event, service khong cascade failure, va co observability du de debug flow that.
 
-> Nguyen tac: lam theo tung service, tung pattern, co verify command rieng. Khong sua `tasks/senior-roadmap.md` trong plan nay.
+> Nguyen tac: lam theo tung service, tung pattern, co verify command rieng. Khong sua `docs/tasks/senior-roadmap.md` trong plan nay.
 
 ## Phase Summary
 
@@ -87,7 +87,7 @@ git status --short
 
 ### 4.1.1 Define Error Catalog
 
-**File moi de xuat:** `docs/api-error-catalog.md` hoac `tasks/api-error-catalog.md`
+**File moi de xuat:** `docs/api-error-catalog.md` hoac `docs/tasks/api-error-catalog.md`
 
 - [ ] Dinh nghia error type URI format: `https://bookstore.api/errors/{code}`.
 - [ ] Dinh nghia common fields: `type`, `title`, `status`, `detail`, `instance`, `timestamp`, `traceId`.

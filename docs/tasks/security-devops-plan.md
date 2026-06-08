@@ -1,6 +1,6 @@
 # 🛡️ Security & 🚢 DevOps/ArgoCD Plan — spring-native-bookstore
 
-> **Triết lý:** Chỉ liệt kê việc **đáng làm cho codebase này** ở trạng thái thực tế hiện tại. Không lý thuyết suông. Mỗi item phải có **why**, **what** và **verify**. Tham chiếu chéo với `tasks/senior-roadmap.md` Giai đoạn 3 (Security) và Giai đoạn 5 (GitOps).
+> **Triết lý:** Chỉ liệt kê việc **đáng làm cho codebase này** ở trạng thái thực tế hiện tại. Không lý thuyết suông. Mỗi item phải có **why**, **what** và **verify**. Tham chiếu chéo với `docs/tasks/senior-roadmap.md` Giai đoạn 3 (Security) và Giai đoạn 5 (GitOps).
 
 ---
 

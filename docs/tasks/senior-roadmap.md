@@ -74,7 +74,7 @@ graph TD
   ```
 - [ ] **2.3 Kafka Consumer (reactive):** Lắng nghe `book.created` / `book.updated` / `book.deleted` từ `catalog-service` → index vào Elasticsearch.
     - Dùng `Function<Flux<T>, Mono<Void>>` bean (KHÔNG dùng `Consumer<Flux<T>>` + `.subscribe()` — mất backpressure).
-    - Chi tiết trong `tasks/search-service-plan.md` Phase 5.
+    - Chi tiết trong `docs/tasks/search-service-plan.md` Phase 5.
 - [ ] **2.4 Search API:** Implement các endpoints:
     - `GET /search?q=spring&page=0&size=10` — full-text search
     - `GET /search?author=vitale&sort=price,asc` — filter + sort
@@ -522,7 +522,7 @@ watch kubectl get pods -n bookstore
 
 ## 📚 Further Reading — Tài Liệu Đính Kèm Theo Giai Đoạn
 
-> Mỗi giai đoạn có links đọc hiểu sâu. Chi tiết đầy đủ hơn trong `tasks/new-technology.md` (theo Module) và `tasks/search-service-plan.md` (theo Phase).
+> Mỗi giai đoạn có links đọc hiểu sâu. Chi tiết đầy đủ hơn trong `docs/tasks/new-technology.md` (theo Module) và `docs/tasks/search-service-plan.md` (theo Phase).
 
 ### Giai Đoạn 1 — inventory-service
 - [Spring Cloud Stream — Producing and Consuming Messages](https://docs.spring.io/spring-cloud-stream/reference/spring-cloud-stream/producing-and-consuming-messages.html) — reactive Function bindings.
@@ -532,7 +532,7 @@ watch kubectl get pods -n bookstore
 - [Spring Cloud Stream — Test Binder](https://docs.spring.io/spring-cloud-stream/reference/spring-cloud-stream/testing.html)
 
 ### Giai Đoạn 2 — search-service
-- Xem **`tasks/search-service-plan.md`** — Further Reading per phase (đã chèn).
+- Xem **`docs/tasks/search-service-plan.md`** — Further Reading per phase (đã chèn).
 - [Spring Data Elasticsearch — Reactive Operations](https://docs.spring.io/spring-data/elasticsearch/reference/elasticsearch/reactive-template.html)
 - [Elasticsearch 8 — Search APIs](https://www.elastic.co/guide/en/elasticsearch/reference/current/search.html)
 - [Elasticsearch — Highlighting & Suggesters](https://www.elastic.co/guide/en/elasticsearch/reference/current/highlighting.html)

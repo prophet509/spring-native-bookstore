@@ -37,6 +37,9 @@ spring:
         provider:
           keycloak:
             issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/PolarBookshop
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/realms/PolarBookshop
 
 management:
   endpoints:

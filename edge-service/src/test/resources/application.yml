@@ -12,3 +12,9 @@ spring:
             token-uri: http://localhost/oauth2/token
             jwk-set-uri: http://localhost/oauth2/jwks
             user-info-uri: http://localhost/userinfo
+      resourceserver:
+        jwt:
+          # Static jwk-set-uri so the lazy NimbusReactiveJwtDecoder bean can be created in test
+          # contexts without contacting Keycloak. Existing tests do not exercise the Bearer filter
+          # chain, so the decoder is never actually invoked.
+          jwk-set-uri: http://localhost/oauth2/jwks

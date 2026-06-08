@@ -97,11 +97,16 @@ services:
     hostname: polar-kafka
     container_name: polar-kafka
     user: "0:0"
+    # Kafka was OOMKilled twice during 50-concurrency stress tests (exit 137).
+    # Pin a 1g heap and a 1.5g cgroup limit so the broker has enough headroom for
+    # in-flight produce batches plus PageCache usage under burst load.
+    mem_limit: 1500m
     ports:
       - 9092:9092
     volumes:
       - kafka_data:/var/lib/kafka/data
     environment:
+      - KAFKA_HEAP_OPTS=-Xms512m -Xmx1g
       - KAFKA_NODE_ID=1
       - KAFKA_PROCESS_ROLES=broker,controller
       - KAFKA_CONTROLLER_QUORUM_VOTERS=1@polar-kafka:29093

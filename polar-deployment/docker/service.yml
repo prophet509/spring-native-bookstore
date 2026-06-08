@@ -166,6 +166,10 @@ services:
   edge-service:
     image: "pxloc97/edge-service:0.0.1-SNAPSHOT"
     container_name: "edge-service"
+    # 1g lets the Paketo memory calculator allocate 256m direct buffers + 50 threads + heap.
+    # Default Compose limit was ~365m, which forced -XX:MaxDirectMemorySize=10m and caused
+    # OOM under load (50 concurrent POSTs would exhaust the 10m direct buffer pool).
+    mem_limit: 1g
     ports:
       - 8000:8000
       - 9000:9000
@@ -174,6 +178,10 @@ services:
       - BPL_DEBUG_PORT=8000
       - BPL_JAVA_NMT_ENABLED=false
       - BPL_JVM_THREAD_COUNT=50
+      # Paketo buildpack defaults to MaxDirectMemorySize=10m which is too small for an
+      # API gateway under concurrent load (Netty pooled direct buffers OOM at ~50 concurrent
+      # POSTs). Bump to 256m so request/response buffers can grow under burst.
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=256m
       - OTEL_SERVICE_NAME=edge-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
       - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://grafana-alloy:4318/v1/traces

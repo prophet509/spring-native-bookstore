@@ -52,7 +52,7 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                                         command.isbn(), command.quantity(), command.createdBy())))
                 .flatMap(
                         order -> {
-                            log.atInfo()
+                            log.atDebug()
                                     .addKeyValue("isbn", command.isbn())
                                     .addKeyValue("quantity", command.quantity())
                                     .addKeyValue("status", order.status())
@@ -63,7 +63,7 @@ public class SubmitOrderService implements SubmitOrderUseCase {
                                             .save(order)
                                             .doOnNext(
                                                     saved ->
-                                                            log.atInfo()
+                                                            log.atDebug()
                                                                     .addKeyValue(
                                                                             "orderId", saved.id())
                                                                     .addKeyValue(
@@ -98,12 +98,12 @@ public class SubmitOrderService implements SubmitOrderUseCase {
         }
 
         orderLog(log.atInfo(), order, isbn).addKeyValue("status", "PENDING").log("Order submitted");
-        orderLog(log.atInfo(), order, isbn).log("Publishing order-created event");
+        orderLog(log.atDebug(), order, isbn).log("Publishing order-created event");
         return eventPublisher
                 .publishOrderCreated(order)
                 .doOnSuccess(
                         unused ->
-                                orderLog(log.atInfo(), order, isbn)
+                                orderLog(log.atDebug(), order, isbn)
                                         .log("Published order-created event"))
                 .doOnError(
                         e ->

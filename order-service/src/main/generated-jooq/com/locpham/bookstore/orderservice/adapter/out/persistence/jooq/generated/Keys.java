@@ -4,8 +4,12 @@
 package com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated;
 
 
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.CatalogBookSnapshot;
 import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.Orders;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.OutboxEvent;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.records.CatalogBookSnapshotRecord;
 import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.records.OrdersRecord;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.records.OutboxEventRecord;
 
 import org.jooq.TableField;
 import org.jooq.UniqueKey;
@@ -24,5 +28,7 @@ public class Keys {
     // UNIQUE and PRIMARY KEY definitions
     // -------------------------------------------------------------------------
 
+    public static final UniqueKey<CatalogBookSnapshotRecord> CATALOG_BOOK_SNAPSHOT_PKEY = Internal.createUniqueKey(CatalogBookSnapshot.CATALOG_BOOK_SNAPSHOT, DSL.name("catalog_book_snapshot_pkey"), new TableField[] { CatalogBookSnapshot.CATALOG_BOOK_SNAPSHOT.ISBN }, true);
     public static final UniqueKey<OrdersRecord> ORDERS_PKEY = Internal.createUniqueKey(Orders.ORDERS, DSL.name("orders_pkey"), new TableField[] { Orders.ORDERS.ID }, true);
+    public static final UniqueKey<OutboxEventRecord> OUTBOX_EVENT_PKEY = Internal.createUniqueKey(OutboxEvent.OUTBOX_EVENT, DSL.name("outbox_event_pkey"), new TableField[] { OutboxEvent.OUTBOX_EVENT.ID }, true);
 }

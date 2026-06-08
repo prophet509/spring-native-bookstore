@@ -5,6 +5,7 @@ package com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.gene
 
 
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.Inventory;
+import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.OutboxEvent;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.Reservation;
 
 
@@ -18,6 +19,11 @@ public class Tables {
      * The table <code>public.inventory</code>.
      */
     public static final Inventory INVENTORY = Inventory.INVENTORY;
+
+    /**
+     * The table <code>public.outbox_event</code>.
+     */
+    public static final OutboxEvent OUTBOX_EVENT = OutboxEvent.OUTBOX_EVENT;
 
     /**
      * The table <code>public.reservation</code>.

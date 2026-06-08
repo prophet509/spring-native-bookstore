@@ -102,7 +102,7 @@ jooq {
                 generator {
                     database {
                         name = 'org.jooq.meta.postgres.PostgresDatabase'
-                        includes = 'public.inventory|public.reservation'
+                        includes = 'public.inventory|public.reservation|public.outbox_event'
                         inputSchema = 'public'
                     }
                     generate {

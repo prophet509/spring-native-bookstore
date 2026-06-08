@@ -21,6 +21,7 @@ SKAFFOLD_FILE := skaffold.yml
 	reset \
 	tilt-up tilt-down \
 	platform-up platform-down edge-up edge-down k8s-status \
+	k8s-platform-up k8s-platform-down k8s-services-up k8s-services-down k8s-up k8s-down \
 	cluster-create cluster-delete cluster-down \
 	skaffold-dev skaffold-run skaffold-delete \
 	infra-up infra-down wait-config services-up services-down frontend-up frontend-down compose-up compose-down outbox-cleanup
@@ -101,6 +102,30 @@ edge-down: ## Delete edge-service Kubernetes manifests
 
 k8s-status: ## Show deployments, services, ingress, and pods
 	kubectl get --context $(KUBE_CONTEXT) deployments,services,ingress,pods
+
+K8S_APP_SERVICES := config-service catalog-service order-service inventory-service edge-service
+
+k8s-platform-up: ## Apply backing services (Postgres x3, Kafka, Keycloak, Redis) to the cluster
+	kubectl create configmap keycloak-realm-config --context $(KUBE_CONTEXT) \
+		--from-file=realm-config.json=polar-deployment/docker/keycloak/realm-config.json \
+		--dry-run=client -o yaml | kubectl apply --context $(KUBE_CONTEXT) -f -
+	$(foreach f,$(K8S_PLATFORM_FILES),kubectl apply --context $(KUBE_CONTEXT) -f $(f);)
+	kubectl wait --context $(KUBE_CONTEXT) --for=condition=available --timeout=180s \
+		deploy/polar-postgres deploy/polar-postgres-order deploy/polar-postgres-inventory \
+		deploy/polar-kafka deploy/polar-keycloak deploy/polar-redis
+
+k8s-platform-down: ## Delete backing services from the cluster
+	$(foreach f,$(K8S_PLATFORM_FILES),kubectl delete --context $(KUBE_CONTEXT) -f $(f) --ignore-not-found;)
+
+k8s-services-up: ## Deploy application services (config/catalog/order/inventory/edge) via kustomize
+	$(foreach s,$(K8S_APP_SERVICES),kubectl apply --context $(KUBE_CONTEXT) -k $(s)/k8s/;)
+
+k8s-services-down: ## Delete application services from the cluster
+	$(foreach s,$(K8S_APP_SERVICES),kubectl delete --context $(KUBE_CONTEXT) -k $(s)/k8s/ --ignore-not-found;)
+
+k8s-up: k8s-platform-up k8s-services-up ## Deploy full stack (platform + services) to the cluster
+
+k8s-down: k8s-services-down k8s-platform-down ## Tear down full stack from the cluster
 
 skaffold-dev: ## Run Skaffold dev against Kubernetes cluster
 	skaffold dev -f $(SKAFFOLD_FILE) -p kind

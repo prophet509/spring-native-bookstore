@@ -60,11 +60,11 @@ spec:
               mountPath: /var/lib/kafka/data
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
-            limits:
               cpu: 500m
-              memory: 1Gi
+              memory: 768Mi
+            limits:
+              cpu: "2"
+              memory: 1536Mi
       volumes:
         - name: kafka-data
           emptyDir: {}
@@ -84,3 +84,7 @@ spec:
       protocol: TCP
       port: 19092
       targetPort: 19092
+    - name: controller
+      protocol: TCP
+      port: 29093
+      targetPort: 29093

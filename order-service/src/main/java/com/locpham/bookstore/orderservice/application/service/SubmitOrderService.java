@@ -10,6 +10,7 @@ import com.locpham.bookstore.orderservice.domain.model.Order;
 import com.locpham.bookstore.orderservice.domain.model.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.spi.LoggingEventBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
 import reactor.core.publisher.Mono;
@@ -90,39 +91,35 @@ public class SubmitOrderService implements SubmitOrderUseCase {
 
     private Mono<Order> publishOrderCreatedIfPending(Order order, String isbn) {
         if (order.status() != OrderStatus.PENDING) {
-            log.atInfo()
-                    .addKeyValue("orderId", order.id())
-                    .addKeyValue("isbn", isbn)
+            orderLog(log.atInfo(), order, isbn)
                     .addKeyValue("status", order.status())
                     .log("Order rejected");
             return Mono.just(order);
         }
 
-        log.atInfo()
-                .addKeyValue("orderId", order.id())
-                .addKeyValue("isbn", isbn)
-                .addKeyValue("status", "PENDING")
-                .log("Order submitted");
-        log.atInfo()
-                .addKeyValue("orderId", order.id())
-                .addKeyValue("isbn", isbn)
-                .log("Publishing order-created event");
+        orderLog(log.atInfo(), order, isbn).addKeyValue("status", "PENDING").log("Order submitted");
+        orderLog(log.atInfo(), order, isbn).log("Publishing order-created event");
         return eventPublisher
                 .publishOrderCreated(order)
                 .doOnSuccess(
                         unused ->
-                                log.atInfo()
-                                        .addKeyValue("orderId", order.id())
-                                        .addKeyValue("isbn", isbn)
+                                orderLog(log.atInfo(), order, isbn)
                                         .log("Published order-created event"))
                 .doOnError(
                         e ->
-                                log.atError()
-                                        .addKeyValue("orderId", order.id())
-                                        .addKeyValue("isbn", isbn)
+                                orderLog(log.atError(), order, isbn)
                                         .setCause(e)
                                         .log("Failed to publish order-created event"))
                 .thenReturn(order);
+    }
+
+    /**
+     * Decorates a log event with the {@code orderId} and {@code isbn} key-value pair common to
+     * every order-lifecycle log line, so callers only add the event-specific keys.
+     */
+    private static LoggingEventBuilder orderLog(
+            LoggingEventBuilder builder, Order order, String isbn) {
+        return builder.addKeyValue("orderId", order.id()).addKeyValue("isbn", isbn);
     }
 
     private Order buildPendingOrder(BookSnapshot book, int quantity, String createdBy) {

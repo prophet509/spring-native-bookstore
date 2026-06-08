@@ -5,6 +5,7 @@ package com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.gene
 
 
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.Inventory;
+import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.OutboxEvent;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.Reservation;
 
 import java.util.Arrays;
@@ -34,6 +35,11 @@ public class Public extends SchemaImpl {
     public final Inventory INVENTORY = Inventory.INVENTORY;
 
     /**
+     * The table <code>public.outbox_event</code>.
+     */
+    public final OutboxEvent OUTBOX_EVENT = OutboxEvent.OUTBOX_EVENT;
+
+    /**
      * The table <code>public.reservation</code>.
      */
     public final Reservation RESERVATION = Reservation.RESERVATION;
@@ -55,6 +61,7 @@ public class Public extends SchemaImpl {
     public final List<Table<?>> getTables() {
         return Arrays.asList(
             Inventory.INVENTORY,
+            OutboxEvent.OUTBOX_EVENT,
             Reservation.RESERVATION
         );
     }

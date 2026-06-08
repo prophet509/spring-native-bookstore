@@ -42,8 +42,8 @@ spring:
     username: user
     password: password
     pool:
-      max-size: 100
-      initial-size: 10
+      max-size: 40
+      initial-size: 5
       max-create-connection-time: 2s
       max-acquire-time: 5s
   flyway:

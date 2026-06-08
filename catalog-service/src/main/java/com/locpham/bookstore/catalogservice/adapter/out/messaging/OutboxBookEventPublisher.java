@@ -2,34 +2,34 @@ package com.locpham.bookstore.catalogservice.adapter.out.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.locpham.bookstore.catalogservice.adapter.out.persistence.JsonbPayload;
+import com.locpham.bookstore.catalogservice.adapter.out.persistence.OutboxEvent;
+import com.locpham.bookstore.catalogservice.adapter.out.persistence.SpringDataOutboxRepository;
 import com.locpham.bookstore.catalogservice.application.port.out.BookEventPublisher;
 import com.locpham.bookstore.catalogservice.domain.book.Book;
 import io.micrometer.tracing.Tracer;
 import java.util.UUID;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * Transactional outbox publisher. Inserts one {@code outbox_event} row per mutation; because the
- * caller ({@code BookCatalogService}) runs the save and this insert inside the same
- * {@code @Transactional} method, both commit atomically. Debezium publishes the row to the topic
- * named in {@code destination}. Payload reuses the legacy DTOs so the Kafka wire format is
+ * Transactional outbox publisher. Inserts one {@code outbox_event} row per mutation via Spring Data
+ * JDBC; because the caller ({@code BookCatalogService}) runs the save and this insert inside the
+ * same {@code @Transactional} method, both commit atomically. Debezium publishes the row to the
+ * topic named in {@code destination}. Payload reuses the legacy DTOs so the Kafka wire format is
  * unchanged.
  */
 @Component
 public class OutboxBookEventPublisher implements BookEventPublisher {
 
-    private static final String INSERT =
-            "INSERT INTO outbox_event (id, aggregate_type, aggregate_id, type, destination, payload,"
-                    + " trace_id) VALUES (?, 'book', ?, ?, ?, ?::jsonb, ?)";
+    private static final String AGGREGATE_TYPE = "book";
 
-    private final JdbcTemplate jdbcTemplate;
+    private final SpringDataOutboxRepository outboxRepository;
     private final Tracer tracer;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public OutboxBookEventPublisher(JdbcTemplate jdbcTemplate, Tracer tracer) {
-        this.jdbcTemplate = jdbcTemplate;
+    public OutboxBookEventPublisher(SpringDataOutboxRepository outboxRepository, Tracer tracer) {
+        this.outboxRepository = outboxRepository;
         this.tracer = tracer;
     }
 
@@ -67,14 +67,15 @@ public class OutboxBookEventPublisher implements BookEventPublisher {
                     } catch (JsonProcessingException e) {
                         throw new IllegalStateException("Failed to serialize outbox payload", e);
                     }
-                    jdbcTemplate.update(
-                            INSERT,
-                            UUID.randomUUID(),
-                            isbn,
-                            type,
-                            destination,
-                            json,
-                            currentTraceparent());
+                    outboxRepository.save(
+                            new OutboxEvent(
+                                    UUID.randomUUID(),
+                                    AGGREGATE_TYPE,
+                                    isbn,
+                                    type,
+                                    destination,
+                                    new JsonbPayload(json),
+                                    currentTraceparent()));
                 });
     }
 

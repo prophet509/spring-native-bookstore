@@ -107,7 +107,7 @@ jooq {
                 generator {
                     database {
                         name = 'org.jooq.meta.postgres.PostgresDatabase'
-                        includes = 'public.orders | public.catalog_book_snapshot'
+                        includes = 'public.orders | public.catalog_book_snapshot | public.outbox_event'
                         excludes = ''
                         inputSchema = 'public'
                     }

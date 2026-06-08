@@ -1,17 +1,18 @@
 package com.locpham.bookstore.catalogservice.adapter.out.messaging;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.locpham.bookstore.catalogservice.adapter.out.persistence.OutboxEvent;
+import com.locpham.bookstore.catalogservice.adapter.out.persistence.SpringDataOutboxRepository;
 import com.locpham.bookstore.catalogservice.domain.book.Book;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Pure unit test that verifies the outbox publisher writes the active span's W3C traceparent
@@ -23,7 +24,7 @@ class OutboxBookEventPublisherTraceTest {
 
     @Test
     void traceparent_isWrittenIntoOutboxRow_whenSpanIsActive() {
-        var jdbcTemplate = mock(JdbcTemplate.class);
+        var outboxRepository = mock(SpringDataOutboxRepository.class);
         var tracer = mock(Tracer.class);
         var span = mock(Span.class);
         var ctx = mock(TraceContext.class);
@@ -32,42 +33,41 @@ class OutboxBookEventPublisherTraceTest {
         when(ctx.traceId()).thenReturn("0123456789abcdef0123456789abcdef");
         when(ctx.spanId()).thenReturn("0123456789abcdef");
 
-        var publisher = new OutboxBookEventPublisher(jdbcTemplate, tracer);
+        var publisher = new OutboxBookEventPublisher(outboxRepository, tracer);
         var book = Book.build("ISBN-TRACE-1", "T", "A", 1.0, "P");
 
         publisher.publishBookCreated(book).block();
 
-        // INSERT params: id (UUID), aggregateId (isbn), type, destination, payload (json), trace_id
-        verify(jdbcTemplate)
-                .update(
-                        any(String.class),
-                        any(java.util.UUID.class),
-                        eq("ISBN-TRACE-1"),
-                        eq("BookCreated"),
-                        eq("book.created"),
-                        any(String.class),
-                        eq("00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"));
+        var captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepository).save(captor.capture());
+        var saved = captor.getValue();
+        assertThat(saved.id()).isNotNull();
+        assertThat(saved.aggregateType()).isEqualTo("book");
+        assertThat(saved.aggregateId()).isEqualTo("ISBN-TRACE-1");
+        assertThat(saved.type()).isEqualTo("BookCreated");
+        assertThat(saved.destination()).isEqualTo("book.created");
+        assertThat(saved.payload()).isNotNull();
+        assertThat(saved.payload().json()).contains("ISBN-TRACE-1");
+        assertThat(saved.traceId())
+                .isEqualTo("00-0123456789abcdef0123456789abcdef-0123456789abcdef-01");
     }
 
     @Test
     void traceparent_isNull_whenNoSpanIsActive() {
-        var jdbcTemplate = mock(JdbcTemplate.class);
+        var outboxRepository = mock(SpringDataOutboxRepository.class);
         var tracer = mock(Tracer.class);
         when(tracer.currentSpan()).thenReturn(null);
 
-        var publisher = new OutboxBookEventPublisher(jdbcTemplate, tracer);
+        var publisher = new OutboxBookEventPublisher(outboxRepository, tracer);
         var book = Book.build("ISBN-TRACE-2", "T", "A", 1.0, "P");
 
         publisher.publishBookCreated(book).block();
 
-        verify(jdbcTemplate)
-                .update(
-                        any(String.class),
-                        any(java.util.UUID.class),
-                        eq("ISBN-TRACE-2"),
-                        eq("BookCreated"),
-                        eq("book.created"),
-                        any(String.class),
-                        eq((String) null));
+        var captor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepository).save(captor.capture());
+        var saved = captor.getValue();
+        assertThat(saved.aggregateId()).isEqualTo("ISBN-TRACE-2");
+        assertThat(saved.type()).isEqualTo("BookCreated");
+        assertThat(saved.traceId()).isNull();
     }
 }

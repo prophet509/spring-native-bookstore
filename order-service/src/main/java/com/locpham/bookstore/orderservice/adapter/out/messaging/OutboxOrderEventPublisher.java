@@ -1,33 +1,33 @@
 package com.locpham.bookstore.orderservice.adapter.out.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.JooqOutboxRepository;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.OutboxRecord;
 import com.locpham.bookstore.orderservice.application.port.out.OrderEventPublisherPort;
 import com.locpham.bookstore.orderservice.domain.model.Order;
 import io.micrometer.tracing.Tracer;
 import java.util.List;
-import java.util.UUID;
-import org.jooq.DSLContext;
-import org.jooq.JSONB;
-import org.jooq.impl.DSL;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Transactional outbox publisher. Writes one {@code outbox_event} row per domain event using the
- * same R2DBC connection as the aggregate save (wrap caller in a transaction). Debezium tails the
- * row and publishes to the topic named in {@code destination}. Payload reuses the legacy message
- * DTOs so the Kafka wire format is unchanged.
+ * Transactional outbox publisher. Builds one {@code outbox_event} row per domain event and
+ * delegates the insert to {@link JooqOutboxRepository}, which runs on the same R2DBC connection as
+ * the aggregate save (wrap caller in a transaction). Debezium tails the row and publishes to the
+ * topic named in {@code destination}. Payload reuses the legacy message DTOs so the Kafka wire
+ * format is unchanged.
  */
 @Component
 public class OutboxOrderEventPublisher implements OrderEventPublisherPort {
 
-    private final DSLContext dsl;
+    private static final String AGGREGATE_TYPE = "order";
+
+    private final JooqOutboxRepository outboxRepository;
     private final Tracer tracer;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public OutboxOrderEventPublisher(DSLContext dsl, Tracer tracer) {
-        this.dsl = dsl;
+    public OutboxOrderEventPublisher(JooqOutboxRepository outboxRepository, Tracer tracer) {
+        this.outboxRepository = outboxRepository;
         this.tracer = tracer;
     }
 
@@ -61,44 +61,18 @@ public class OutboxOrderEventPublisher implements OrderEventPublisherPort {
     }
 
     private Mono<Void> append(Long aggregateId, String type, String destination, Object message) {
-        // Flux.from(...).then() (not Mono.from) lets the jOOQ insert complete without an early
-        // cancel that would reclaim the shared transactional connection.
         String traceparent = currentTraceparent();
         return Mono.fromCallable(() -> objectMapper.writeValueAsString(message))
                 .flatMap(
                         json ->
-                                Flux.from(
-                                                dsl.insertInto(DSL.table(DSL.name("outbox_event")))
-                                                        .columns(
-                                                                DSL.field(
-                                                                        DSL.name("id"), UUID.class),
-                                                                DSL.field(
-                                                                        DSL.name("aggregate_type"),
-                                                                        String.class),
-                                                                DSL.field(
-                                                                        DSL.name("aggregate_id"),
-                                                                        String.class),
-                                                                DSL.field(
-                                                                        DSL.name("type"),
-                                                                        String.class),
-                                                                DSL.field(
-                                                                        DSL.name("destination"),
-                                                                        String.class),
-                                                                DSL.field(
-                                                                        DSL.name("payload"),
-                                                                        JSONB.class),
-                                                                DSL.field(
-                                                                        DSL.name("trace_id"),
-                                                                        String.class))
-                                                        .values(
-                                                                UUID.randomUUID(),
-                                                                "order",
-                                                                String.valueOf(aggregateId),
-                                                                type,
-                                                                destination,
-                                                                JSONB.valueOf(json),
-                                                                traceparent))
-                                        .then());
+                                outboxRepository.append(
+                                        new OutboxRecord(
+                                                AGGREGATE_TYPE,
+                                                String.valueOf(aggregateId),
+                                                type,
+                                                destination,
+                                                json,
+                                                traceparent)));
     }
 
     /**

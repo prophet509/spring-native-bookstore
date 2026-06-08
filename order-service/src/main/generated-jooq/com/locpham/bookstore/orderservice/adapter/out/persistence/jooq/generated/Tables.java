@@ -4,7 +4,9 @@
 package com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated;
 
 
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.CatalogBookSnapshot;
 import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.Orders;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.OutboxEvent;
 
 
 /**
@@ -14,7 +16,17 @@ import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated
 public class Tables {
 
     /**
+     * The table <code>public.catalog_book_snapshot</code>.
+     */
+    public static final CatalogBookSnapshot CATALOG_BOOK_SNAPSHOT = CatalogBookSnapshot.CATALOG_BOOK_SNAPSHOT;
+
+    /**
      * The table <code>public.orders</code>.
      */
     public static final Orders ORDERS = Orders.ORDERS;
+
+    /**
+     * The table <code>public.outbox_event</code>.
+     */
+    public static final OutboxEvent OUTBOX_EVENT = OutboxEvent.OUTBOX_EVENT;
 }

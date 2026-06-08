@@ -5,8 +5,10 @@ package com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.gene
 
 
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.Inventory;
+import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.OutboxEvent;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.Reservation;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.records.InventoryRecord;
+import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.records.OutboxEventRecord;
 import com.locpham.bookstore.inventoryservice.adapter.out.persistence.jooq.generated.tables.records.ReservationRecord;
 
 import org.jooq.TableField;
@@ -28,6 +30,7 @@ public class Keys {
 
     public static final UniqueKey<InventoryRecord> INVENTORY_ISBN_KEY = Internal.createUniqueKey(Inventory.INVENTORY, DSL.name("inventory_isbn_key"), new TableField[] { Inventory.INVENTORY.ISBN }, true);
     public static final UniqueKey<InventoryRecord> INVENTORY_PKEY = Internal.createUniqueKey(Inventory.INVENTORY, DSL.name("inventory_pkey"), new TableField[] { Inventory.INVENTORY.ID }, true);
+    public static final UniqueKey<OutboxEventRecord> OUTBOX_EVENT_PKEY = Internal.createUniqueKey(OutboxEvent.OUTBOX_EVENT, DSL.name("outbox_event_pkey"), new TableField[] { OutboxEvent.OUTBOX_EVENT.ID }, true);
     public static final UniqueKey<ReservationRecord> RESERVATION_PKEY = Internal.createUniqueKey(Reservation.RESERVATION, DSL.name("reservation_pkey"), new TableField[] { Reservation.RESERVATION.ID }, true);
     public static final UniqueKey<ReservationRecord> UQ_RESERVATION_ORDER_ISBN = Internal.createUniqueKey(Reservation.RESERVATION, DSL.name("uq_reservation_order_isbn"), new TableField[] { Reservation.RESERVATION.ORDER_ID, Reservation.RESERVATION.ISBN }, true);
 }

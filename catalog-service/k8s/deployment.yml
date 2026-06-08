@@ -25,14 +25,16 @@ spec:
             httpGet:
               path: /actuator/health/liveness
               port: 9001
-            initialDelaySeconds: 10
-            periodSeconds: 5
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 6
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 9001
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
             periodSeconds: 15
+            failureThreshold: 6
           imagePullPolicy: Always
           lifecycle:
             preStop:
@@ -72,7 +74,7 @@ spec:
             - name: SPRING_CLOUD_CONFIG_URI
               value: "http://config-service"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "http://polar-keycloak/realms/PolarBookshop"
+              value: "http://polar-keycloak:8080/realms/PolarBookshop"
           volumeMounts:
             - name: catalog-service-volume
               mountPath: /workspace/config

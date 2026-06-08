@@ -45,7 +45,7 @@ services:
       # WebFlux/Netty serves I/O via direct buffers; the Paketo memory calculator's 10M default
       # causes "Cannot reserve ... direct buffer memory" OOM under load. Override it (appended after
       # the calculated value, so it wins). mem_limit pins the calculator's budget so heap is stable.
-      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=128M
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=128M -XX:+AlwaysPreTouch -XX:MaxGCPauseMillis=50 -XX:+UseStringDeduplication
       - OTEL_SERVICE_NAME=order-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
       - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://grafana-alloy:4318/v1/traces
@@ -83,7 +83,7 @@ services:
       # WebFlux/Netty serves I/O via direct buffers; the Paketo memory calculator's 10M default
       # causes "Cannot reserve ... direct buffer memory" OOM under load. Override it (appended after
       # the calculated value, so it wins). mem_limit pins the calculator's budget so heap is stable.
-      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=128M
+      - JAVA_TOOL_OPTIONS=-XX:MaxDirectMemorySize=128M -XX:+AlwaysPreTouch -XX:MaxGCPauseMillis=50 -XX:+UseStringDeduplication
       - OTEL_SERVICE_NAME=inventory-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://grafana-alloy:4318
       - MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=http://grafana-alloy:4318/v1/traces

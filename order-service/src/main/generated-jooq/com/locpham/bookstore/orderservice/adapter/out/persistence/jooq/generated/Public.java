@@ -4,7 +4,9 @@
 package com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated;
 
 
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.CatalogBookSnapshot;
 import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.Orders;
+import com.locpham.bookstore.orderservice.adapter.out.persistence.jooq.generated.tables.OutboxEvent;
 
 import java.util.Arrays;
 import java.util.List;
@@ -28,9 +30,19 @@ public class Public extends SchemaImpl {
     public static final Public PUBLIC = new Public();
 
     /**
+     * The table <code>public.catalog_book_snapshot</code>.
+     */
+    public final CatalogBookSnapshot CATALOG_BOOK_SNAPSHOT = CatalogBookSnapshot.CATALOG_BOOK_SNAPSHOT;
+
+    /**
      * The table <code>public.orders</code>.
      */
     public final Orders ORDERS = Orders.ORDERS;
+
+    /**
+     * The table <code>public.outbox_event</code>.
+     */
+    public final OutboxEvent OUTBOX_EVENT = OutboxEvent.OUTBOX_EVENT;
 
     /**
      * No further instances allowed
@@ -48,7 +60,9 @@ public class Public extends SchemaImpl {
     @Override
     public final List<Table<?>> getTables() {
         return Arrays.asList(
-            Orders.ORDERS
+            CatalogBookSnapshot.CATALOG_BOOK_SNAPSHOT,
+            Orders.ORDERS,
+            OutboxEvent.OUTBOX_EVENT
         );
     }
 }

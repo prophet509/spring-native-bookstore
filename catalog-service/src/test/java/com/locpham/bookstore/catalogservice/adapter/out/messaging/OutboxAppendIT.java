@@ -35,7 +35,7 @@ class OutboxAppendIT {
         var isbn = "OUTBOX-" + System.nanoTime();
         var book = Book.build(isbn, "Title", "Author", 9.90, "Polarsophia");
 
-        publisher.publishBookCreated(book).block();
+        publisher.publishBookCreated(book);
 
         Map<String, Object> row =
                 jdbcTemplate.queryForMap(

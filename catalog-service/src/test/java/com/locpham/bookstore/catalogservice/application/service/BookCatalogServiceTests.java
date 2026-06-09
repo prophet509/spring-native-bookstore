@@ -19,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
 class BookCatalogServiceTests {
@@ -40,7 +39,6 @@ class BookCatalogServiceTests {
     void addBookWhenNotExistsShouldSaveAndPublishCreated() {
         given(bookRepository.existsByIsbn(book.isbn())).willReturn(false);
         given(bookRepository.save(book)).willReturn(book);
-        given(publisher.publishBookCreated(any(Book.class))).willReturn(Mono.empty());
 
         var saved = service.addBookToCatalog(book);
 
@@ -73,7 +71,6 @@ class BookCatalogServiceTests {
         given(bookRepository.existsByIsbn("1234567890")).willReturn(true);
         given(bookRepository.findByIsbn("1234567890")).willReturn(Optional.of(existing));
         given(bookRepository.save(any(Book.class))).willAnswer(inv -> inv.getArgument(0));
-        given(publisher.publishBookUpdated(any(Book.class))).willReturn(Mono.empty());
 
         var saved = service.editBookDetails(partial);
 
@@ -95,7 +92,6 @@ class BookCatalogServiceTests {
     @Test
     void deleteBookWhenExistsShouldDeleteAndPublishDeleted() {
         given(bookRepository.existsByIsbn("1234567890")).willReturn(true);
-        given(publisher.publishBookDeleted("1234567890")).willReturn(Mono.empty());
 
         service.deleteBook("1234567890");
 

@@ -36,7 +36,7 @@ class OutboxBookEventPublisherTraceTest {
         var publisher = new OutboxBookEventPublisher(outboxRepository, tracer);
         var book = Book.build("ISBN-TRACE-1", "T", "A", 1.0, "P");
 
-        publisher.publishBookCreated(book).block();
+        publisher.publishBookCreated(book);
 
         var captor = ArgumentCaptor.forClass(OutboxEvent.class);
         verify(outboxRepository).save(captor.capture());
@@ -61,7 +61,7 @@ class OutboxBookEventPublisherTraceTest {
         var publisher = new OutboxBookEventPublisher(outboxRepository, tracer);
         var book = Book.build("ISBN-TRACE-2", "T", "A", 1.0, "P");
 
-        publisher.publishBookCreated(book).block();
+        publisher.publishBookCreated(book);
 
         var captor = ArgumentCaptor.forClass(OutboxEvent.class);
         verify(outboxRepository).save(captor.capture());

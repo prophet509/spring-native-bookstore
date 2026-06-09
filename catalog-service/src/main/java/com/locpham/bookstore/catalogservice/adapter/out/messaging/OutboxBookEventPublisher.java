@@ -10,7 +10,6 @@ import com.locpham.bookstore.catalogservice.domain.book.Book;
 import io.micrometer.tracing.Tracer;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 /**
  * Transactional outbox publisher. Inserts one {@code outbox_event} row per mutation via Spring Data
@@ -34,8 +33,8 @@ public class OutboxBookEventPublisher implements BookEventPublisher {
     }
 
     @Override
-    public Mono<Void> publishBookCreated(Book book) {
-        return append(
+    public void publishBookCreated(Book book) {
+        append(
                 book.isbn(),
                 "BookCreated",
                 "book.created",
@@ -44,8 +43,8 @@ public class OutboxBookEventPublisher implements BookEventPublisher {
     }
 
     @Override
-    public Mono<Void> publishBookUpdated(Book book) {
-        return append(
+    public void publishBookUpdated(Book book) {
+        append(
                 book.isbn(),
                 "BookUpdated",
                 "book.updated",
@@ -54,29 +53,26 @@ public class OutboxBookEventPublisher implements BookEventPublisher {
     }
 
     @Override
-    public Mono<Void> publishBookDeleted(String isbn) {
-        return append(isbn, "BookDeleted", "book.deleted", new BookDeletedMessage(isbn));
+    public void publishBookDeleted(String isbn) {
+        append(isbn, "BookDeleted", "book.deleted", new BookDeletedMessage(isbn));
     }
 
-    private Mono<Void> append(String isbn, String type, String destination, Object message) {
-        return Mono.fromRunnable(
-                () -> {
-                    String json;
-                    try {
-                        json = objectMapper.writeValueAsString(message);
-                    } catch (JsonProcessingException e) {
-                        throw new IllegalStateException("Failed to serialize outbox payload", e);
-                    }
-                    outboxRepository.save(
-                            new OutboxEvent(
-                                    UUID.randomUUID(),
-                                    AGGREGATE_TYPE,
-                                    isbn,
-                                    type,
-                                    destination,
-                                    new JsonbPayload(json),
-                                    currentTraceparent()));
-                });
+    private void append(String isbn, String type, String destination, Object message) {
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(message);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize outbox payload", e);
+        }
+        outboxRepository.save(
+                new OutboxEvent(
+                        UUID.randomUUID(),
+                        AGGREGATE_TYPE,
+                        isbn,
+                        type,
+                        destination,
+                        new JsonbPayload(json),
+                        currentTraceparent()));
     }
 
     /**

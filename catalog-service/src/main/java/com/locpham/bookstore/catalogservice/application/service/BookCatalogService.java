@@ -11,6 +11,10 @@ import com.locpham.bookstore.catalogservice.domain.book.exception.BookAlreadyExi
 import com.locpham.bookstore.catalogservice.domain.book.exception.BookNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +34,9 @@ public class BookCatalogService
 
     @Override
     @Transactional
+    @Caching(
+            put = {@CachePut(value = "books", key = "#book.isbn()")},
+            evict = {@CacheEvict(value = "booksPage", allEntries = true)})
     public Book editBookDetails(Book book) {
         var isbn = book.isbn();
         log.debug("Editing book details isbn={}", isbn);
@@ -43,13 +50,18 @@ public class BookCatalogService
         var updated = existing.updateWith(book);
 
         var saved = bookRepository.save(updated);
-        publisher.publishBookUpdated(saved).block();
+        publisher.publishBookUpdated(saved);
         log.info("Book updated isbn={}", isbn);
         return saved;
     }
 
     @Override
     @Transactional
+    @Caching(
+            evict = {
+                @CacheEvict(value = "books", key = "#isbn"),
+                @CacheEvict(value = "booksPage", allEntries = true)
+            })
     public void deleteBook(String isbn) {
         log.debug("Deleting book isbn={}", isbn);
 
@@ -59,11 +71,12 @@ public class BookCatalogService
         }
 
         bookRepository.deleteByIsbn(isbn);
-        publisher.publishBookDeleted(isbn).block();
+        publisher.publishBookDeleted(isbn);
         log.info("Book deleted isbn={}", isbn);
     }
 
     @Override
+    @Cacheable(value = "books", key = "#isbn")
     public Book viewBookDetail(String isbn) throws BookNotFoundException {
         log.debug("Viewing book detail isbn={}", isbn);
         return bookRepository
@@ -76,6 +89,7 @@ public class BookCatalogService
     }
 
     @Override
+    @Cacheable(value = "booksPage", key = "'all'")
     public Iterable<Book> viewBookList() {
         log.debug("Viewing book list");
         return bookRepository.findAll();
@@ -83,6 +97,9 @@ public class BookCatalogService
 
     @Override
     @Transactional
+    @Caching(
+            put = {@CachePut(value = "books", key = "#book.isbn()")},
+            evict = {@CacheEvict(value = "booksPage", allEntries = true)})
     public Book addBookToCatalog(Book book) {
         var isbn = book.isbn();
         log.debug("Adding book to catalog isbn={}", isbn);
@@ -93,7 +110,7 @@ public class BookCatalogService
         }
 
         var saved = bookRepository.save(book);
-        publisher.publishBookCreated(saved).block();
+        publisher.publishBookCreated(saved);
         log.info("Book added isbn={} title={}", isbn, book.title());
         return saved;
     }

@@ -1,85 +1,49 @@
-# CLAUDE.md (CAVEMAN COMPRESSED)
+# CLAUDE.md (Thin wrapper)
 
-## MCP Setup
-Templates: `mcp/`
-* Claude Desktop: `mcp/claude_desktop_config.json`
-* Windsurf: `~/.codeium/windsurf/mcp_config.json` (template: `mcp/windsurf_mcp_config.json`)
-* OpenCode: `opencode.json` (template: `mcp/opencode.json`)
-* Claude Code: `.mcp.json`
-* VS Code / Cursor: `.vscode/mcp.json`
-* Codex: `~/.codex/config.toml`
+> Full project instructions are in [AGENTS.md](./AGENTS.md). This file only contains Claude-specific reminders.
 
-### Active MCP Servers & Commands
-1. **codegraph**: serve codebase graph. Command: `codegraph serve --mcp`
-2. **code-review-graph**: persistent codebase relationships, blast radius. Command: `uvx code-review-graph serve`
-3. **claude-mem**: persistent session memory. Command: `node /Users/locpham/.claude/plugins/marketplaces/thedotmack/plugin/scripts/mcp-server.cjs`
-4. **java-lsp**: semantic Java navigation. Command: `npx -y lsp-mcp-server`. *Needs `jls` on PATH, config `mcp/lsp-mcp.json`*
-5. **java-app-modernization**: upgrade analysis. Command: `npx -y @microsoft/github-copilot-app-modernization-mcp-server@latest` (env `APPMOD_MCP_COLLECT_TELEMETRY=false`)
-6. **bookstore-postgres-catalog**: DB. Command: `uvx postgres-mcp --access-mode=restricted` (env `DATABASE_URI=postgresql://user:password@localhost:5432/polardb_catalog`)
-7. **bookstore-postgres-order**: DB. Command: `uvx postgres-mcp --access-mode=restricted` (env `DATABASE_URI=postgresql://user:password@localhost:5433/polardb_order`)
-8. **bookstore-postgres-inventory**: DB. Command: `uvx postgres-mcp --access-mode=restricted` (env `DATABASE_URI=postgresql://user:password@localhost:5434/polardb_inventory`)
-9. **bookstore-redis**: Cache. Command: `uvx --from redis-mcp-server@latest redis-mcp-server --url redis://localhost:6379/0`
-10. **bookstore-keycloak**: Auth. Command: `npx -y keycloak-model-context-protocol` (env `KEYCLOAK_URL=http://localhost:8080`, `KEYCLOAK_ADMIN=user`, `KEYCLOAK_ADMIN_PASSWORD=password`)
-11. **bookstore-kafka**: Stream. Command: `uvx mcp-kafka` (env `KAFKA_BOOTSTRAP_SERVERS=localhost:9092`)
-12. **bookstore-elasticsearch**: Search. Command: `uvx elasticsearch-mcp-server-es9` (env `ELASTICSEARCH_HOSTS=http://localhost:9200`)
+## Claude-specific reminders
 
----
+* **MCP config files**: `mcp/claude_desktop_config.json` (Claude Desktop) and `.mcp.json` (Claude Code). Templates in `mcp/`.
+* **Claude-mem**: prefer `search`, `timeline`, `get_observations`, and corpus tools for long-term memory.
+* **CodeGraph / CRG**: MUST run `codegraph_impact` or CRG `detect-changes` before editing symbols.
+* **RTK**: prefix shell commands with `rtk` to save tokens.
 
-## CodeGraph / Code-Review-Graph Rules
-* **Before editing symbol**: MUST run `codegraph_impact` or CRG `detect-changes` check. Report blast radius (callers, callees, risk level).
-* **If risk HIGH / CRITICAL**: MUST warn user first.
-* **Symbol path between X & Y**: Use `codegraph_trace`.
-* **Survey multiple symbols**: Use `codegraph_explore`.
-* **Search symbol name**: Use `codegraph_search`.
-* **Map task area**: Use `codegraph_context`.
-* **Find affected test files**: run `git diff --name-only | codegraph affected --stdin`.
-* **Index missing**: run `codegraph init && codegraph index`. Run `uvx code-review-graph build` to re-index CRG SQLite graph database.
-* **No Find-and-Replace**: use `java-lsp` rename or IDE refactoring.
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
 
----
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
 
-## RTK (Rust Token Killer) Commands
-* Always prefix command with `rtk`. Saves 60-99% tokens.
-* E.g. `rtk git status`, `rtk git diff`, `rtk cargo test`, `rtk npm run <script>`.
-* Works with `&&`: `rtk git add . && rtk git commit -m "msg" && rtk git push`.
-* Check savings: `rtk gain`. View history: `rtk gain --history`.
-* Setup global hook: `rtk init -g`. Local setup: `rtk init`.
+### When to use graph tools FIRST
 
----
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
 
-## Claude-Mem Tools
-Use long-term session memory tools for query:
-* `search`: semantic search over memories
-* `timeline`: session events chronological
-* `get_observations`: list captured knowledge
-* `smart_search` / `smart_outline` / `smart_unfold`: context-aware navigation
-* `build_corpus` / `query_corpus` / `prime_corpus`: corpus knowledge management
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
----
+### Key Tools
 
-## LLM Coding Guidelines
-*Bias caution over speed.*
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
 
-### 1. Think First
-* No assumptions. If confused, ask.
-* Multiple options? Present all. No silent picking.
-* Simpler way exists? Suggest. Push back.
-* Unclear? Stop. Name confusion. Ask.
+### Workflow
 
-### 2. Simplicity First
-* Minimum code. No speculative features.
-* No single-use abstractions. No extra configurations.
-* No dead-end error checks.
-* Short over long: 200 lines ➔ 50 lines. Overcomplicated? Simplify.
-
-### 3. Surgical Edits
-* Touch only what requested. No "improvement" of surrounding code.
-* No unsolicited refactoring. Match existing style.
-* Dead code found? Mention only. Do not delete.
-* Remove unused imports/vars caused by YOUR edits.
-
-### 4. Goal-Driven
-* Plan: `[Step] ➔ verify: [check]`.
-* "Add validation" ➔ write failing test, make pass.
-* "Fix bug" ➔ write reproducing test, make pass.
-* "Refactor" ➔ run tests before/after.
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.

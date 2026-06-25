@@ -1,3 +1,14 @@
+server:
+  ssl:
+    enabled: ${MTLS_ENABLED:false}
+    client-auth: ${EDGE_MTLS_CLIENT_AUTH:none}
+    key-store: ${MTLS_KEY_STORE:}
+    key-store-password: ${MTLS_KEY_STORE_PASSWORD:}
+    key-store-type: ${MTLS_KEY_STORE_TYPE:PKCS12}
+    trust-store: ${MTLS_TRUST_STORE:}
+    trust-store-password: ${MTLS_TRUST_STORE_PASSWORD:}
+    trust-store-type: ${MTLS_TRUST_STORE_TYPE:PKCS12}
+
 spring:
   data:
     redis:
@@ -14,18 +25,41 @@ spring:
       bus:
         enabled: true
     gateway:
+      httpclient:
+        ssl:
+          key-store: ${MTLS_KEY_STORE:}
+          key-store-password: ${MTLS_KEY_STORE_PASSWORD:}
+          key-store-type: ${MTLS_KEY_STORE_TYPE:PKCS12}
+          trusted-x509-certificates: ${MTLS_TRUSTED_X509_CERTIFICATES:}
       server:
         webflux:
           default-filters:
             - SaveSession
             - TokenRelay
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET
+                series: SERVER_ERROR
+                exceptions: java.io.IOException,java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${EDGE_RATE_LIMIT_REPLENISH_RATE:10}
+                redis-rate-limiter.burstCapacity: ${EDGE_RATE_LIMIT_BURST_CAPACITY:20}
+                redis-rate-limiter.requestedTokens: ${EDGE_RATE_LIMIT_REQUESTED_TOKENS:1}
+                key-resolver: "#{@userKeyResolver}"
           routes:
             - id: spa-route
-              uri: http://polar-ui:9004
+              uri: ${SPA_URL:http://polar-ui:9004}
               predicates:
                 - Path=/,/*.css,/*.js,/favicon.ico
             - id: catalog-route
-              uri: http://catalog-service:9001
+              uri: ${CATALOG_SERVICE_URL:http://catalog-service:9001}
               predicates:
                 - Path=/books,/books/**
               filters:
@@ -34,10 +68,29 @@ spring:
                     name: catalogCircuitBreaker
                     fallbackUri: forward:/catalog-fallback
             - id: order-route
-              uri: http://order-service:9002
+              uri: ${ORDER_SERVICE_URL:http://order-service:9002}
               predicates:
                 - Path=/orders,/orders/**
               filters:
                 - name: CircuitBreaker
                   args:
                     name: orderCircuitBreaker
+                    fallbackUri: forward:/order-fallback
+            - id: inventory-route
+              uri: ${INVENTORY_SERVICE_URL:http://inventory-service:9004}
+              predicates:
+                - Path=/inventory,/inventory/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: inventoryCircuitBreaker
+                    fallbackUri: forward:/inventory-fallback
+            - id: search-route
+              uri: ${SEARCH_SERVICE_URL:http://search-service:9005}
+              predicates:
+                - Path=/search,/search/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: searchCircuitBreaker
+                    fallbackUri: forward:/search-fallback

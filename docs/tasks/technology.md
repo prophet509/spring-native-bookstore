@@ -124,45 +124,28 @@ cd order-service && ./gradlew bootRun --args='--spring.profiles.active=prod'
 
 ---
 
-### 2.1 Outbox Pattern
+### 2.1 Outbox Pattern ✅
 
-**Service:** `order-service`
+**Service:** `order-service`, `inventory-service`, `catalog-service`
 
 **Tại sao Senior cần biết:**
 Vấn đề kinh điển: save DB thành công, publish Kafka fail → dữ liệu không nhất quán. Outbox giải quyết điều này.
 
-**Vấn đề cần giải quyết:**
-```
-Hiện tại (UNSAFE):
-1. Save Order vào DB ✅
-2. Publish Kafka event ❌ (network fail) → Order tồn tại nhưng inventory không biết!
-```
+**Đã hoàn thành:** Dùng **Debezium CDC** (không phải polling-based). Xem `docs/tasks/saga-outbox-plan.md` cho chi tiết đầy đủ.
 
-**Tasks:**
-- [ ] Tạo Flyway migration `V_outbox__create_outbox_table.sql`:
-  ```sql
-  CREATE TABLE outbox_events (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    aggregate_type VARCHAR(50) NOT NULL,  -- 'Order'
-    aggregate_id   VARCHAR(100) NOT NULL, -- orderId
-    event_type     VARCHAR(100) NOT NULL, -- 'OrderPlaced'
-    payload        JSONB NOT NULL,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    processed_at   TIMESTAMPTZ,
-    status         VARCHAR(20) NOT NULL DEFAULT 'PENDING' -- PENDING, SENT, FAILED
-  );
-  ```
-- [ ] Trong cùng một DB transaction: save Order + insert vào outbox_events
-- [ ] Tạo `OutboxPoller` chạy mỗi 1 giây (Spring Scheduling): đọc PENDING events → publish Kafka → update status = SENT
-- [ ] Xử lý retry: event FAILED sau 3 lần thử → alert
-- [ ] Test: Kill Kafka trong lúc đặt hàng → restart Kafka → event tự động được gửi lại
+**Kiến trúc đã implement:**
+- Mỗi service có `outbox_event` table (Flyway `V6__create_outbox_event.sql`)
+- Publisher adapter (`OutboxXxxEventPublisher`) insert row vào cùng transaction với aggregate save
+- Debezium PostgreSQL connector tail WAL → Outbox Event Router SMT → publish to Kafka topic theo `destination` column
+- `trace_id` column lưu W3C traceparent, Debezium map thành Kafka header
+- Outbox retention qua `make outbox-cleanup` (SQL-based, không dùng `pg_cron`)
+
+**Không dùng polling-based:** Không có `OutboxPoller`, không có `status`/`attempts`/`processed_at` columns. Debezium đọc trực tiếp từ WAL → at-least-once delivery.
 
 **Verify:**
 ```bash
-# 1. Stop Kafka
-docker stop kafka
-# 2. Đặt đơn hàng → thấy event vào bảng outbox với status PENDING
-# 3. Start Kafka lại → thấy event được gửi và status = SENT
+# Outbox đã được stress-tested: 1000 req / 50 concurrency = 100% success
+# Xem saga-outbox-plan.md §3.2 cho kết quả chi tiết
 ```
 
 ---
@@ -240,34 +223,34 @@ time curl http://localhost:9001/books/isbn-123
 
 ---
 
-### 2.4 Saga Pattern
+### 2.4 Saga Pattern ✅
 
-**Service:** `order-service`, `inventory-service`
+**Service:** `order-service`, `inventory-service`, `dispatcher-service`
 
 **Tại sao Senior cần biết:**
 Không có distributed transaction trong microservices. Saga là cách đảm bảo data consistency qua nhiều services với khả năng rollback (compensation).
 
-**Luồng Saga cần implement:**
+**Đã hoàn thành:** Choreography-based saga với Outbox + Debezium. Xem `docs/tasks/saga-outbox-plan.md`.
+
+**Luồng Saga đã implement:**
 ```
 PlaceOrder Saga (Choreography-based):
-  Step 1: order-service     → Save Order (PENDING)     → publish OrderPlaced
-  Step 2: inventory-service → Reserve Stock             → publish StockReserved | StockInsufficient
-  Step 3: order-service     → [StockReserved]  → CONFIRMED → publish OrderConfirmed
-           order-service     → [StockInsufficient] → CANCELLED → publish OrderCancelled
-  Step 4: inventory-service → [OrderCancelled] → Release Stock
+  Step 1: order-service     → Save Order + outbox row → Debezium → order-created-events
+  Step 2: inventory-service → Reserve Stock + outbox row → Debezium → inventory-events
+  Step 3: order-service     → [reserved] → ACCEPTED + outbox row → Debezium → order-accepted
+  Step 3: order-service     → [rejected] → CANCELLED (compensation)
+  Step 4: dispatcher-service → [order-accepted] → dispatch → order-dispatched
+  Step 5: order-service     → [order-dispatched] → DISPATCHED
 ```
 
-**Tasks:**
-- [ ] Map ra toàn bộ Saga flow trên giấy trước khi code
-- [ ] Implement compensation logic trong `order-service`: khi nhận `StockReservationFailed` → update Order status = `CANCELLED`
-- [ ] Implement compensation logic trong `inventory-service`: khi nhận `OrderCancelled` → release reserved stock
-- [ ] Đảm bảo idempotency: mỗi step có thể nhận event trùng lặp mà không bị double-process
-- [ ] Xử lý timeout Saga: nếu sau 5 phút không nhận response từ inventory → tự động cancel
-- [ ] Test end-to-end: simulate `StockInsufficient` → verify Order = CANCELLED, Stock không bị trừ
+**Idempotency đã implement:**
+- inventory: `reservationPort.findByOrderId` short-circuit + Redis claim
+- search: idempotent upsert/delete by ISBN
+
+**Stress test đã pass:** 1000 orders / 50 concurrency = 100% DISPATCHED, exactly 1000 inventory consumed.
 
 **Verify:**
-- Đặt đơn hàng với số lượng vượt quá stock
-- Kiểm tra: Order status = CANCELLED, stock trong DB không thay đổi
+- Xem `docs/tasks/saga-outbox-plan.md` §3.2 cho kết quả stress test chi tiết
 
 ---
 
@@ -535,10 +518,10 @@ curl https://api.bookstore.yourdomain.com/books
 | 1 | Global Exception Handling | ⬜ |
 | 1 | Validation | ⬜ |
 | 1 | Structured Logging | ⬜ |
-| 2 | Outbox Pattern | ⬜ |
+| 2 | Outbox Pattern | ✅ |
 | 2 | Circuit Breaker | ⬜ |
 | 2 | Caching (Read-Through) | ⬜ |
-| 2 | Saga Pattern | ⬜ |
+| 2 | Saga Pattern | ✅ |
 | 3 | Security hoàn chỉnh | ⬜ |
 | 3 | Write-Behind Cache | ⬜ |
 | 4 | Distributed Tracing | ⬜ |

@@ -67,11 +67,30 @@ spec:
               value: "polar-redis"
             - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI
               value: "http://polar-keycloak:8080/realms/PolarBookshop"
+            - name: MTLS_ENABLED
+              value: "false"
+            - name: MTLS_KEY_STORE
+              value: "/etc/mtls/keystore.p12"
+            - name: MTLS_KEY_STORE_PASSWORD
+              value: ""
+            - name: MTLS_KEY_STORE_TYPE
+              value: "PKCS12"
+            - name: MTLS_TRUST_STORE
+              value: "/etc/mtls/truststore.p12"
+            - name: MTLS_TRUST_STORE_PASSWORD
+              value: ""
+            - name: MTLS_TRUST_STORE_TYPE
+              value: "PKCS12"
+            - name: EDGE_MTLS_CLIENT_AUTH
+              value: "none"
           volumeMounts:
             - name: edge-service-volume
               mountPath: /workspace/config
             - name: edge-service-volume-secret
               mountPath: /workspace/secrets/edge-service
+              readOnly: true
+            - name: mtls-certs
+              mountPath: /etc/mtls
               readOnly: true
       volumes:
         - name: edge-service-volume
@@ -80,3 +99,7 @@ spec:
         - name: edge-service-volume-secret
           secret:
             secretName: edge-service
+        - name: mtls-certs
+          secret:
+            secretName: edge-service-mtls-certs
+            optional: true

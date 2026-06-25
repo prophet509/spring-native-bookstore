@@ -1,5 +1,25 @@
 polar:
-  catalog-service-url: http://localhost:9001
+  catalog-service-url: ${CATALOG_SERVICE_URL:http://catalog-service:9001}
+  http-client:
+    mtls:
+      enabled: ${ORDER_HTTP_CLIENT_MTLS_ENABLED:${MTLS_ENABLED:false}}
+      key-store: ${MTLS_KEY_STORE:}
+      key-store-password: ${MTLS_KEY_STORE_PASSWORD:}
+      key-store-type: ${MTLS_KEY_STORE_TYPE:PKCS12}
+      trust-store: ${MTLS_TRUST_STORE:}
+      trust-store-password: ${MTLS_TRUST_STORE_PASSWORD:}
+      trust-store-type: ${MTLS_TRUST_STORE_TYPE:PKCS12}
+
+server:
+  ssl:
+    enabled: ${MTLS_ENABLED:false}
+    client-auth: ${BACKEND_MTLS_CLIENT_AUTH:need}
+    key-store: ${MTLS_KEY_STORE:}
+    key-store-password: ${MTLS_KEY_STORE_PASSWORD:}
+    key-store-type: ${MTLS_KEY_STORE_TYPE:PKCS12}
+    trust-store: ${MTLS_TRUST_STORE:}
+    trust-store-password: ${MTLS_TRUST_STORE_PASSWORD:}
+    trust-store-type: ${MTLS_TRUST_STORE_TYPE:PKCS12}
 
 spring:
   cloud:

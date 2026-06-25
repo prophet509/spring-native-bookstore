@@ -23,7 +23,7 @@ graph TD
     Keycloak["Keycloak :8080"] -.->|OIDC/JWT| EdgeService
 ```
 
-**Stack:** Java 21 · Spring Boot 4.0.3 · Spring Cloud 2025.1.0 · Kafka · PostgreSQL · Elasticsearch · Redis · Keycloak · K8s · ArgoCD · GitHub Actions
+**Stack:** Java 21 · Spring Boot 4.0.3 (search-service 4.0.6) · Spring Cloud 2025.1.0 (search-service 2025.1.1) · Kafka · PostgreSQL · Elasticsearch · Redis · Keycloak · K8s · ArgoCD · GitHub Actions
 
 ---
 
@@ -31,22 +31,22 @@ graph TD
 
 ---
 
-### Giai Đoạn 1 — Hoàn Thiện inventory-service ✅ (Đang làm)
-> Giai đoạn này vẫn giữ vì inventory chưa xong, không phải học lại.
+### Giai Đoạn 1 — Hoàn Thiện inventory-service ✅
+> Đã hoàn thành: domain layer (Reservation, InventoryItem, InventoryDecision), jOOQ persistence, Kafka consumer với idempotency, outbox publisher, integration tests (Testcontainers + IdempotentConsumerIT).
 
-- [ ] **1.1 Domain Layer:** Enforce reservation invariants (all-or-nothing, idempotency theo `orderId`)
-- [ ] **1.2 Persistence (jOOQ):** Implement `StockReservationRepository`, xử lý concurrency với `SELECT FOR UPDATE`
-- [ ] **1.3 Event Consumer:** Handle `order-accepted` → reserve, `order-cancelled` → release
-- [ ] **1.4 Integration Tests:** Testcontainers PostgreSQL + Spring Cloud Stream Test Binder
+- [x] **1.1 Domain Layer:** Enforce reservation invariants (all-or-nothing, idempotency theo `orderId`)
+- [x] **1.2 Persistence (jOOQ):** Implement `StockReservationRepository`, xử lý concurrency với `SELECT FOR UPDATE`
+- [x] **1.3 Event Consumer:** Handle `order-created` → reserve, `order-cancelled` → release
+- [x] **1.4 Integration Tests:** Testcontainers PostgreSQL + Spring Cloud Stream Test Binder
 
 ---
 
-### Giai Đoạn 2 — Search Service ⭐ (Mới hoàn toàn)
-> Xây `search-service` từ đầu — service mới nhất, thú vị nhất.
+### Giai Đoạn 2 — Search Service ✅
+> Đã hoàn thành: search-service đã build từ đầu với Elasticsearch, Kafka consumer (reactive Function beans), SecurityConfig, BookDocument domain, tests.
 
-**Stack:** Spring Boot + Spring Data Elasticsearch + Kafka Consumer
+**Stack:** Spring Boot 4.0.6 + Spring Data Elasticsearch + Kafka Consumer
 
-- [ ] **2.1 Bootstrap project:** Tạo `search-service` theo Hexagonal structure của `order-service`
+- [x] **2.1 Bootstrap project:** Tạo `search-service` theo Hexagonal structure của `order-service`
   ```
   search-service/
   ├── domain/         ← BookDocument, SearchQuery, SearchResult
@@ -58,7 +58,7 @@ graph TD
   │   └── out/        ← ElasticsearchBookRepository
   └── bootstrap/      ← Spring config
   ```
-- [ ] **2.2 Elasticsearch mapping:** Định nghĩa `BookDocument` với analyzers tiếng Anh:
+- [x] **2.2 Elasticsearch mapping:** Định nghĩa `BookDocument` với analyzers tiếng Anh:
   ```java
   @Document(indexName = "books")
   public record BookDocument(
@@ -72,18 +72,18 @@ graph TD
       // ...
   ) {}
   ```
-- [ ] **2.3 Kafka Consumer (reactive):** Lắng nghe `book.created` / `book.updated` / `book.deleted` từ `catalog-service` → index vào Elasticsearch.
+- [x] **2.3 Kafka Consumer (reactive):** Lắng nghe `book.created` / `book.updated` / `book.deleted` từ `catalog-service` → index vào Elasticsearch.
     - Dùng `Function<Flux<T>, Mono<Void>>` bean (KHÔNG dùng `Consumer<Flux<T>>` + `.subscribe()` — mất backpressure).
     - Chi tiết trong `docs/tasks/search-service-plan.md` Phase 5.
-- [ ] **2.4 Search API:** Implement các endpoints:
+- [x] **2.4 Search API:** Implement các endpoints:
     - `GET /search?q=spring&page=0&size=10` — full-text search
     - `GET /search?author=vitale&sort=price,asc` — filter + sort
     - `GET /search/suggest?q=spr` — autocomplete
-- [ ] **2.5 Highlight:** Trả về highlighted snippets trong kết quả tìm kiếm
-- [ ] **2.6 catalog-service phát event:** Thêm Kafka publisher vào `catalog-service` khi book được tạo/cập nhật/xóa (publish `book.created` / `book.updated` / `book.deleted`).
+- [x] **2.5 Highlight:** Trả về highlighted snippets trong kết quả tìm kiếm
+- [x] **2.6 catalog-service phát event:** Thêm Kafka publisher vào `catalog-service` khi book được tạo/cập nhật/xóa (publish `book.created` / `book.updated` / `book.deleted`).
     - Stack catalog hiện là MVC blocking → dùng `StreamBridge.send` sau `bookRepository.save(...)`.
     - Khi migrate sang reactive (R2DBC) trong tương lai → chuyển sang `Sinks.Many` pattern (xem search-service-plan Phase 7).
-- [ ] **2.7 Tests:** Integration test với Testcontainers Elasticsearch
+- [x] **2.7 Tests:** Integration test với Testcontainers Elasticsearch
 
 **Verify:**
 ```bash
@@ -98,7 +98,11 @@ curl "http://localhost:9005/search?q=spring+boot"
 
 > **Phân tích thực tế edge-service hiện tại:**
 > - ✅ **Có rồi:** OAuth2 Client (Authorization Code + OIDC), CSRF cookie, Redis session, Rate Limiter, TokenRelay filter, OIDC Logout, Circuit Breaker
-> - ❌ **Chưa có / thiếu:** Refresh Token handling, PKCE, Token Relay hiểu sâu, downstream JWT validation, Security Headers đầy đủ, Role-based ở method level, Token introspection, BFF pattern hoàn chỉnh
+> - ✅ **Downstream JWT validation:** Tất cả resource servers (catalog/order/inventory/dispatcher/search) đều có `oauth2ResourceServer.jwt(issuer-uri)`
+> - ✅ **KeycloakJwtAuthoritiesConverter:** Đã có ở TẤT CẢ service (catalog/order/inventory/dispatcher/search) — convert `roles` + `realm_access.roles` claim sang `ROLE_*`
+> - ✅ **Per-endpoint role rules:** order (GET authenticated, POST customer/employee), inventory (GET permitAll), search (GET permitAll), catalog (GET permitAll, POST/PUT/DELETE employee)
+> - ✅ **Method security:** `@EnableReactiveMethodSecurity` ở order/inventory, `@EnableMethodSecurity` ở catalog
+> - ❌ **Chưa có / thiếu:** Refresh Token rotation, PKCE verification, Security Headers đầy đủ (CSP/HSTS), Per-user rate limiting, Audit log, mTLS, Vulnerability scanning
 
 #### 3.A — Hiểu Sâu OAuth2 Flows (Lý thuyết phải biết trước khi code)
 
@@ -147,7 +151,7 @@ Downstream requests: edge-service relay Access Token qua TokenRelay filter
     - Mỗi lần dùng Refresh Token → Keycloak cấp Refresh Token mới + revoke cái cũ
     - Nếu Refresh Token cũ bị dùng lại → Keycloak phát hiện tấn công, revoke toàn bộ session
 
-- [ ] **3.B.3 Token Validation ở Downstream Services:**
+- [x] **3.B.3 Token Validation ở Downstream Services:**
   ```java
   // catalog-service, order-service cần thêm:
   implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
@@ -165,7 +169,7 @@ Downstream requests: edge-service relay Access Token qua TokenRelay filter
     - Users: `bjorn`/`bjorn` (employee), `isabelle`/`isabelle` (customer)
     - Mapper: thêm custom mapper để đưa `roles` vào JWT claim (Vitale dùng `roles` claim, không phải `realm_access`)
 
-- [ ] **3.B.5 Role-based Access Control:**
+- [x] **3.B.5 Role-based Access Control:**
   ```java
   // SecurityConfig.java — thêm role check
   .pathMatchers(HttpMethod.POST, "/books/**").hasRole("employee")
@@ -250,10 +254,10 @@ Downstream requests: edge-service relay Access Token qua TokenRelay filter
 
 - [ ] **4.1** Global Exception Handling + Validation (RFC 7807 Problem Details)
 - [ ] **4.2** Structured Logging — JSON output với MDC (`traceId`, `userId`)
-- [ ] **4.3** Outbox Pattern trong `order-service`
+- [x] **4.3** Outbox Pattern — Đã hoàn thành với Debezium CDC (xem `docs/tasks/saga-outbox-plan.md`)
 - [ ] **4.4** Circuit Breaker + Retry + Timeout với Resilience4j
 - [ ] **4.5** Caching với Redis (Read-Through cho catalog, Write-Behind cho audit log)
-- [ ] **4.6** Saga Pattern — PlaceOrder choreography với compensation
+- [x] **4.6** Saga Pattern — PlaceOrder choreography với compensation (xem `docs/tasks/saga-outbox-plan.md`)
 - [ ] **4.7** Distributed Tracing — OpenTelemetry → Grafana Tempo
 - [ ] **4.8** Custom Metrics — Micrometer → Prometheus → Grafana dashboard
 
@@ -499,10 +503,10 @@ watch kubectl get pods -n bookstore
 
 | # | Giai đoạn | Trạng thái |
 |---|-----------|------------|
-| 1 | inventory-service hoàn thiện | ⬜ Đang làm |
-| 2 | search-service (Elasticsearch) | ⬜ |
-| 3 | Security hoàn chỉnh (Keycloak) | ⬜ |
-| 4 | Production Patterns (Outbox, CB, Saga, Metrics) | ⬜ |
+| 1 | inventory-service hoàn thiện | ✅ |
+| 2 | search-service (Elasticsearch) | ✅ |
+| 3 | Security hoàn chỉnh (Keycloak) | 🔄 Partial (JWT validation + role rules + converter done; headers/PKCE/refresh rotation pending) |
+| 4 | Production Patterns (Outbox, CB, Saga, Metrics) | 🔄 Partial (Outbox ✅, Saga ✅; CB/Cache/Metrics pending) |
 | 5 | GitOps (ArgoCD + GitHub Actions) | ⬜ |
 | 6 | Knative Serverless | ⬜ |
 | 7 | AWS Production | ⬜ |

@@ -54,6 +54,36 @@ class SecurityConfigTests {
                 .is3xxRedirection();
     }
 
+    @Test
+    void whenBrowserRequestThenSecurityHeadersAreWritten() {
+        webTestClient
+                .get()
+                .uri("/books")
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectHeader()
+                .valueEquals(
+                        "Content-Security-Policy",
+                        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'")
+                .expectHeader()
+                .valueEquals("Referrer-Policy", "strict-origin")
+                .expectHeader()
+                .valueEquals("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    }
+
+    @Test
+    void whenSecureBrowserRequestThenHstsHeaderIsWritten() {
+        webTestClient
+                .get()
+                .uri("https://localhost/books")
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectHeader()
+                .valueMatches("Strict-Transport-Security", ".*max-age=.*");
+    }
+
     private ClientRegistration testClientRegistration() {
         return ClientRegistration.withRegistrationId("test")
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)

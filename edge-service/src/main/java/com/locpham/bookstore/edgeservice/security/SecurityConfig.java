@@ -178,6 +178,23 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
+                .headers(
+                        headers ->
+                                headers.contentSecurityPolicy(
+                                                csp ->
+                                                        csp.policyDirectives(
+                                                                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"))
+                                        .referrerPolicy(
+                                                ref ->
+                                                        ref.policy(
+                                                                ReferrerPolicyServerHttpHeadersWriter
+                                                                        .ReferrerPolicy
+                                                                        .STRICT_ORIGIN))
+                                        .permissionsPolicy(
+                                                perm ->
+                                                        perm.policy(
+                                                                "camera=(), microphone=(), geolocation=()"))
+                                        .hsts(Customizer.withDefaults()))
                 .exceptionHandling(
                         eh ->
                                 eh.authenticationEntryPoint(
@@ -240,7 +257,8 @@ public class SecurityConfig {
                                         .permissionsPolicy(
                                                 perm ->
                                                         perm.policy(
-                                                                "camera=(), microphone=(), geolocation=()")))
+                                                                "camera=(), microphone=(), geolocation=()"))
+                                        .hsts(Customizer.withDefaults()))
                 .build();
     }
 

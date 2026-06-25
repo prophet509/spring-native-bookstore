@@ -9,7 +9,17 @@
 ### Security đã có
 - [x] `edge-service` Gateway: OAuth2 Client (Authorization Code + OIDC) + Redis Session + `TokenRelay` filter + Rate Limiter + Circuit Breaker + OIDC Logout.
 - [x] Resource servers (catalog/order/inventory/dispatcher/search): `oauth2ResourceServer.jwt(issuer-uri)` validate JWT.
-- [x] `KeycloakJwtAuthoritiesConverter` ở **catalog-service** — convert Keycloak `roles` claim sang Spring Security `ROLE_*`.
+- [x] `KeycloakJwtAuthoritiesConverter` ở **TẤT CẢ service** (catalog/order/inventory/dispatcher/search) — convert `roles` + `realm_access.roles` claim sang Spring Security `ROLE_*`.
+  - **catalog-service**: converter nhận `clientId` param, extract thêm `resource_access.<client-id>.roles` (client-level roles).
+  - **order/inventory/dispatcher/search**: converter extract `roles` (direct) + `realm_access.roles` (realm-level).
+  - **Tests**: `KeycloakJwtAuthoritiesConverterTest` ở order/inventory/search.
+- [x] **Per-endpoint role rules** đã implement:
+  - catalog: `GET /books/**` permitAll, POST/PUT/DELETE `hasRole("employee")`, actuator `hasRole("ADMIN")` (health/info permitAll).
+  - order: `GET /orders/**` authenticated, `POST /orders/**` `hasAnyRole("customer", "employee")`.
+  - inventory: `GET /inventory/**` permitAll.
+  - search: `GET /search/**` permitAll.
+  - dispatcher: `anyExchange().authenticated()`.
+- [x] **Method security**: `@EnableReactiveMethodSecurity` ở order/inventory/search, `@EnableMethodSecurity` ở catalog.
 - [x] CSRF disabled cho stateless services (đúng).
 - [x] Session: stateless cho resource servers, Redis cho edge.
 
@@ -19,9 +29,7 @@
 - [x] **Token issuer mismatch local Docker**: token từ host (`localhost:8080`) có `iss` khác với resource server (`polar-keycloak:8080`). Đã fix bằng cách load-test fetch token qua Docker network alias.
 
 ### Security còn thiếu / yếu
-- ❌ **Role rule quá broad**: hầu hết service dùng `anyRequest().hasRole("employee")` — không phân biệt customer vs employee per-endpoint.
-- ❌ **`KeycloakJwtAuthoritiesConverter` chỉ có ở catalog** — order/inventory/dispatcher chưa có chung mapper. Khả năng cao role hiện không match được.
-- ❌ Không có **method-level `@PreAuthorize`** cho fine-grained authz (đã `@EnableMethodSecurity` ở catalog nhưng chưa dùng).
+- ❌ **Method-level `@PreAuthorize`** chưa dùng rộng rãi — `@EnableMethodSecurity`/`@EnableReactiveMethodSecurity` đã bật nhưng chưa có `@PreAuthorize` thực tế trên domain methods.
 - ❌ Không có **security headers** (CSP, HSTS, X-Frame-Options, Permissions-Policy) ở edge.
 - ❌ **JWK cache** không được tune — mỗi resource server fetch JWK độc lập, có thể hammer Keycloak khi restart đồng loạt.
 - ❌ Không có **PKCE verification test** — Spring Security 6+ tự bật nhưng chưa verify network trace.
@@ -59,14 +67,16 @@
 
 ### A1. Khắc phục những thứ "phải có" trước (Quick wins, cao ROI)
 
-#### A1.1 Đồng bộ `KeycloakJwtAuthoritiesConverter` cho tất cả service
+#### A1.1 Đồng bộ `KeycloakJwtAuthoritiesConverter` cho tất cả service ✅
 
 **Why:** Hiện tại chỉ catalog có. Order/inventory/dispatcher khi authorize sẽ đối chiếu `realm_access.roles` Keycloak format mặc định, mà SecurityConfig dùng `hasRole("employee")` → có thể fail vì Spring expect prefix `ROLE_` và claim path khác.
 
-**What:**
-- [ ] Trích `KeycloakJwtAuthoritiesConverter` (hoặc tương đương reactive) thành lib riêng hoặc copy vào mỗi service.
-- [ ] Áp `JwtAuthenticationConverter` (servlet) hoặc `ReactiveJwtAuthenticationConverter` (webflux) trỏ về converter này.
-- [ ] Thêm test verify: `@WithJwt(claims = {roles: ["employee"]})` → `hasRole("employee")` pass.
+**Status: COMPLETE.** `KeycloakJwtAuthoritiesConverter` đã có ở tất cả service (catalog/order/inventory/dispatcher/search). Tests đã có ở order/inventory/search.
+
+**What (done):**
+- [x] Trích `KeycloakJwtAuthoritiesConverter` thành class riêng trong mỗi service.
+- [x] Áp `JwtAuthenticationConverter` (servlet) hoặc `ReactiveJwtAuthenticationConverterAdapter` (webflux) trỏ về converter này.
+- [x] Thêm test verify: `KeycloakJwtAuthoritiesConverterTest` ở order/inventory/search.
 
 **Verify:**
 ```bash
@@ -79,28 +89,18 @@ curl -i -X POST http://localhost:9001/books -H "Authorization: Bearer $TOKEN_CUS
 # expect 403 (customer cannot create)
 ```
 
-#### A1.2 Per-endpoint role rules
+#### A1.2 Per-endpoint role rules ✅
 
 **Why:** `anyRequest().hasRole("employee")` chặn cả `GET /books` (mà thực ra cho phép `permitAll`), nhưng không phân biệt được POST/PUT/DELETE (chỉ employee) và GET (cả customer).
 
-**What:** Sửa `SecurityConfig` của catalog/order/inventory như sau:
+**Status: COMPLETE.** Per-endpoint rules đã implement ở tất cả service.
 
-```java
-// catalog-service
-.requestMatchers(HttpMethod.GET, "/books/**").permitAll()
-.requestMatchers(HttpMethod.POST, "/books/**").hasRole("employee")
-.requestMatchers(HttpMethod.PUT, "/books/**").hasRole("employee")
-.requestMatchers(HttpMethod.DELETE, "/books/**").hasRole("employee")
-
-// order-service
-.pathMatchers(HttpMethod.GET, "/orders/**").authenticated()  // mọi user đăng nhập
-.pathMatchers(HttpMethod.POST, "/orders").hasAnyRole("customer", "employee")
-.pathMatchers(HttpMethod.DELETE, "/orders/**").hasRole("employee")
-
-// inventory-service
-.pathMatchers(HttpMethod.GET, "/inventory/**").authenticated()
-// các write endpoint không expose qua HTTP (chỉ qua Kafka)
-```
+**What (done):**
+- [x] catalog: `GET /books/**` permitAll, POST/PUT/DELETE `hasRole("employee")`, actuator health/info permitAll, actuator khác `hasRole("ADMIN")`.
+- [x] order: `GET /orders/**` authenticated, `POST /orders/**` `hasAnyRole("customer", "employee")`.
+- [x] inventory: `GET /inventory/**` permitAll.
+- [x] search: `GET /search/**` permitAll.
+- [x] dispatcher: `anyExchange().authenticated()`.
 
 **Verify:** Bộ test contract `*SecurityConfigTest` cho mỗi service:
 ```java
@@ -116,7 +116,7 @@ void securityRules(String method, String path, String role, int expectedStatus) 
 
 #### A1.3 Method-level `@PreAuthorize` cho domain rules
 
-**Why:** Có những rule không thuộc URL pattern: chỉ cho phép user xem **đơn hàng của chính mình** (ngoại trừ employee được xem tất cả).
+**Why:** Có những rule không thuộc URL pattern: chỉ cho phép user xem **đơn hàng của chính mình** (ngoại trừ employee được xem tất cả). `@EnableMethodSecurity`/`@EnableReactiveMethodSecurity` đã bật ở catalog/order/inventory/search nhưng chưa có `@PreAuthorize` thực tế.
 
 **What:**
 ```java
@@ -361,35 +361,43 @@ plugins { id 'org.cyclonedx.bom' version '2.0.0' }
 
 **What:**
 - [ ] Tạo repo `polar-bookstore-gitops` (hoặc folder `polar-deployment/gitops/` cùng repo, tradeoff dễ debug nhưng coupled hơn).
-- [ ] Cấu trúc:
+- [ ] Cấu trúc (Kustomize overlay style):
 ```
 polar-bookstore-gitops/
 ├── argocd/
-│   ├── applicationset.yml      ← một ApplicationSet generate Application cho tất cả service
+│   ├── applicationset.yml      ← một ApplicationSet generate Application cho tất cả service × env
 │   └── projects/
-│       └── bookstore.yml       ← AppProject scope
-├── platform/                   ← Postgres x3, Kafka, Redis, Keycloak
+│       └── bookstore.yml       ← AppProject scope + RBAC
+├── platform/                   ← Postgres x3, Kafka, Redis, Keycloak, observability
 │   ├── postgres-order.yml
 │   └── ...
-├── environments/
-│   ├── dev/
-│   │   ├── values.yml          ← override (replicas: 1, mem: 512Mi)
-│   │   └── kustomization.yml
-│   ├── staging/
-│   │   ├── values.yml          ← (replicas: 2, mem: 1Gi)
-│   │   └── kustomization.yml
-│   └── production/
-│       ├── values.yml          ← (replicas: 3, HPA, PDB)
-│       └── kustomization.yml
 └── services/
     ├── order-service/
     │   ├── base/               ← deployment + service + configmap (giống hiện tại trong order-service/k8s/)
-    │   └── kustomization.yml
+    │   │   ├── deployment.yml
+    │   │   ├── service.yml
+    │   │   └── kustomization.yml
+    │   └── overlays/
+    │       ├── staging/
+    │       │   ├── kustomization.yml   ← namePrefix: staging-, image tag, replicas
+    │       │   ├── replicas-patch.yml
+    │       │   └── resources-patch.yml
+    │       └── production/
+    │           ├── kustomization.yml   ← namePrefix: prod-, image tag, replicas
+    │           ├── replicas-patch.yml
+    │           ├── hpa.yml
+    │           ├── pdb.yml
+    │           └── resources-patch.yml
     └── ...
 ```
 
 - [ ] Move K8s manifests từ `<service>/k8s/` sang GitOps repo. App repo chỉ chứa code, GitOps repo chứa manifest.
-- [ ] CI bump image tag: sau khi push image, CI clone GitOps repo → `yq e '.spec.template.spec.containers[0].image = "...:${SHA}"' -i environments/staging/order-service/deployment.yml` → commit → push.
+- [ ] CI bump image tag: sau khi push image, CI clone GitOps repo → chạy `kustomize edit set image` trong overlay tương ứng → commit → push. Ví dụ:
+  ```bash
+  cd services/order-service/overlays/staging
+  kustomize edit set image order-service=ghcr.io/${{ github.repository_owner }}/order-service:${{ github.sha }}
+  ```
+  Không dùng `yq` sửa raw `deployment.yml` vì dễ làm hỏng Kustomize overlay.
 
 ### B3. ArgoCD setup
 
@@ -404,48 +412,38 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 
 #### B3.2 ApplicationSet — generate Apps tự động
 
-**Why:** Có 6+ service, không nên viết Application thủ công cho từng cái.
+**Why:** Có 6+ service × 2 env, không nên viết Application thủ công cho từng cái. Tách thành **hai ApplicationSet** vì ArgoCD chỉ bật auto-sync khi block `automated:` tồn tại; không thể dùng một template cho cả auto-sync và manual-sync.
 
-**What:**
+**Staging — auto-sync:**
 ```yaml
-# argocd/applicationset.yml
+# argocd/applicationset-staging.yml
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: bookstore
+  name: bookstore-staging
   namespace: argocd
 spec:
   generators:
-    - matrix:
-        generators:
-          - list:
-              elements:
-                - service: catalog-service
-                - service: order-service
-                - service: inventory-service
-                - service: dispatcher-service
-                - service: edge-service
-                - service: search-service
-          - list:
-              elements:
-                - env: staging
-                  cluster: https://kubernetes.default.svc
-                - env: production
-                  cluster: https://kubernetes.default.svc
+    - list:
+        elements:
+          - service: catalog-service
+          - service: order-service
+          - service: inventory-service
+          - service: dispatcher-service
+          - service: edge-service
+          - service: search-service
   template:
     metadata:
-      name: '{{service}}-{{env}}'
+      name: '{{service}}-staging'
     spec:
       project: bookstore
       source:
         repoURL: https://github.com/<you>/polar-bookstore-gitops
         targetRevision: main
-        path: services/{{service}}
-        kustomize:
-          namePrefix: '{{env}}-'
+        path: services/{{service}}/overlays/staging
       destination:
-        server: '{{cluster}}'
-        namespace: 'bookstore-{{env}}'
+        server: https://kubernetes.default.svc
+        namespace: bookstore-staging
       syncPolicy:
         automated:
           prune: true
@@ -454,17 +452,109 @@ spec:
           - CreateNamespace=true
 ```
 
+**Production — manual sync:**
+```yaml
+# argocd/applicationset-production.yml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: bookstore-production
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - service: catalog-service
+          - service: order-service
+          - service: inventory-service
+          - service: dispatcher-service
+          - service: edge-service
+          - service: search-service
+  template:
+    metadata:
+      name: '{{service}}-production'
+    spec:
+      project: bookstore
+      source:
+        repoURL: https://github.com/<you>/polar-bookstore-gitops
+        targetRevision: main
+        path: services/{{service}}/overlays/production
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: bookstore-production
+      syncPolicy:
+        # Không có block automated → ArgoCD chỉ detect drift, không tự sync
+        syncOptions:
+          - CreateNamespace=true
+```
+
+**Notes:**
+- `path` trỏ đến **overlay** (`overlays/{{env}}`), không phải base.
+- Không dùng `namePrefix` ở ApplicationSet; overlay đã tự quản lý prefix (nếu cần).
+
 #### B3.3 Sync policy theo env
 
-| Env | `automated.prune` | `automated.selfHeal` | Manual approve |
-|---|---|---|---|
-| dev (kind) | false | false | n/a (không qua ArgoCD) |
-| **staging** | **true** | **true** | không (auto-sync) |
-| **production** | true | false | **có** (`syncPolicy.automated` không set) |
+| Env | `automated.prune` | `automated.selfHeal` | Auto-sync | Manual approve |
+|---|---|---|---|---|
+| dev (kind) | n/a | n/a | false | n/a (không qua ArgoCD) |
+| **staging** | **true** | **true** | **true** | không (auto-sync) |
+| **production** | n/a | n/a | **false** | **có** (kỹ sư click Sync sau review) |
 
 Production: dev push tag `v1.2.3` → CI bump GitOps repo → ArgoCD detect change nhưng KHÔNG sync → kỹ sư review + click "Sync" trên UI.
 
-#### B3.4 Notifications
+#### B3.4 AppProject + RBAC
+
+**Why:** Không để Application dùng `project: default`. AppProject giới hạn source repo, destination cluster/namespace, và resource kinds được phép sync. Trong production cấm dùng initial admin account.
+
+**What:**
+```yaml
+# argocd/projects/bookstore.yml
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bookstore
+  namespace: argocd
+spec:
+  description: Polar Bookstore services
+  sourceRepos:
+    - https://github.com/<you>/polar-bookstore-gitops
+  destinations:
+    - namespace: bookstore-staging
+      server: https://kubernetes.default.svc
+    - namespace: bookstore-production
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist: []   # không cho phép cluster-scoped resources
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: ServiceAccount
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: batch
+      kind: Job
+    - group: argoproj.io          # nếu dùng Argo Rollouts
+      kind: Rollout
+    - group: argoproj.io
+      kind: AnalysisTemplate
+  orphanedResources:
+    warn: true
+```
+
+- [ ] Cấu hình ArgoCD SSO (OIDC/Dex) thay vì dùng initial admin password.
+- [ ] Tạo ArgoCD policy: `role:bookstore-admin` có quyền sync `bookstore` project; `role:bookstore-readonly` chỉ xem.
+- [ ] Lưu admin password ban đầu vào secret manager và rotate ngay sau setup.
+- [ ] Backup ArgoCD state: export Application + AppProject manifests định kỳ.
+
+#### B3.5 Notifications
 
 ```yaml
 # argocd-notifications-cm
@@ -516,7 +606,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: order-service
+    name: order-service   # phải khớp với tên Deployment sau khi overlay áp namePrefix (nếu có)
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -526,6 +616,9 @@ spec:
         target:
           type: Utilization
           averageUtilization: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
 ```
 
 ```yaml
@@ -535,11 +628,16 @@ kind: PodDisruptionBudget
 metadata:
   name: order-service
 spec:
-  minAvailable: 1
+  maxUnavailable: 1    # tốt hơn minAvailable: 1 khi replica count thấp
   selector:
     matchLabels:
       app: order-service
 ```
+
+**Notes:**
+- `minAvailable: 1` cho service 2 replicas vẫn có thể cho phép drain cả 2 pod nếu có surge. `maxUnavailable: 1` an toàn hơn.
+- Nếu overlay dùng `namePrefix: prod-`, HPA `scaleTargetRef.name` phải là `prod-order-service`, và PDB selector cũng phải khớp label (không khớp theo tên).
+- Cân nhắc thêm `topologySpreadConstraints` trong Deployment để pod nằm ở các node/AZ khác nhau.
 
 ### B6. Secrets — SealedSecrets
 
@@ -564,12 +662,17 @@ kubectl create secret generic catalog-db --from-literal=password=password \
 **Why:** Hiện Flyway chạy lúc app start. Race condition khi 2+ replica boot đồng thời. Cách đúng: chạy migrations qua **Job** riêng trước khi rollout app.
 
 **What:**
+
+**Option A (khuyến nghị):** Build một migrations image nhỏ chứa SQL từ `src/main/resources/db/migration/`. Không dùng ConfigMap vì dễ vượt size limit và lạc version.
+
 ```yaml
 # services/order-service/base/flyway-job.yml
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: flyway-order-{{ .Values.image.tag }}     # tag-suffixed = mỗi version mới run lại
+  name: flyway-order-${IMAGE_TAG}     # tag-suffixed = mỗi version mới run lại
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"   # chạy trước Deployment
 spec:
   ttlSecondsAfterFinished: 600
   template:
@@ -577,23 +680,23 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: flyway
-          image: flyway/flyway:10
+          image: ghcr.io/<you>/order-service-migrations:${IMAGE_TAG}
           command: [flyway, migrate]
           args:
             - -url=jdbc:postgresql://polar-postgres-order:5432/polardb_order
             - -user=$(USER)
             - -password=$(PASSWORD)
-            - -locations=filesystem:/sql
+            - -locations=filesystem:/flyway/sql
           envFrom:
             - secretRef: { name: order-db }
-          volumeMounts:
-            - name: migrations
-              mountPath: /sql
-      volumes:
-        - name: migrations
-          configMap: { name: order-flyway-migrations }
 ```
-- [ ] Argo CD `sync-wave` annotation đảm bảo Job chạy trước Deployment.
+
+**Option B (đơn giản hơn cho local):** Dùng init container chạy từ application image nhưng chỉ cho phép 1 replica khởi động đầu tiên chạy migration. Không dùng cho production multi-replica vẫn có race risk.
+
+- [ ] Argo CD `sync-wave` annotation (`argocd.argoproj.io/sync-wave: "-1"`) đảm bảo Job chạy trước Deployment.
+- [ ] CI build và push `*-migrations` image cùng tag với app image.
+- [ ] Không bao giờ rollback migration bằng cách delete Job; rollback = revert GitOps commit + run forward-fix migration (`V<next>__*.sql`).
+
 
 ### B8. Argo Rollouts (canary, optional)
 
@@ -640,9 +743,26 @@ spec:
 
 **What:** Document trong `RUNBOOK.md`:
 - [ ] Rollback ArgoCD: `argocd app rollback <app> <revision>` hoặc revert GitOps commit.
-- [ ] Rollback DB migration: Flyway downgrade scripts (`U<n>__*.sql`) — opt-in.
+- [ ] Rollback DB migration: Flyway downgrade scripts (`U<n>__*.sql`) — opt-in, nhưng ưu tiên forward-fix migration.
 - [ ] Postgres backup: cron job dump → S3 (production trên AWS RDS dùng auto-backup).
 - [ ] Recovery time test: mỗi quý chạy "kill cluster → restore từ Git" — nếu < 30 phút thì pass.
+
+### B10. Production readiness checklist
+
+**Goal:** Đảm bảo ArgoCD + K8s setup không chỉ chạy được mà còn an toàn và operable.
+
+- [ ] **Resource limits/requests** đã set cho tất cả containers.
+- [ ] **ResourceQuota + LimitRange** đã tạo trong mỗi namespace (`bookstore-staging`, `bookstore-production`).
+- [ ] **NetworkPolicies** hạn chế traffic giữa các service (chỉ cho phép những gì cần thiết).
+- [ ] **Pod Security Standards** (restricted) được apply cho namespace.
+- [ ] **Liveness, readiness, startup probes** đã thêm vào tất cả Deployments.
+- [ ] **Topology spread constraints** đảm bảo pod phân bố qua node/AZ.
+- [ ] **Image pull secrets** cho registry private (GHCR/ECR) đã tạo và mount.
+- [ ] **Container image non-root user** và read-only root filesystem.
+- [ ] **ArgoCD notifications** gửi Slack/email khi sync failed/health degraded.
+- [ ] **Monitoring ArgoCD itself**: metrics `/metrics`, Grafana dashboard, alert when app is `OutOfSync` hoặc `Degraded`.
+- [ ] **Backup ArgoCD**: lưu trữ AppProject, ApplicationSet, secret ngoài cluster.
+- [ ] **Disaster recovery drill** đã chạy ít nhất 1 lần trước khi go-live.
 
 ---
 
@@ -666,10 +786,10 @@ spec:
 | 1 | B1 Image registry GHCR + CI push immutable tag | ⬜ |
 | 1 | B6 SealedSecrets — convert secret.yml | ⬜ |
 | 2 | B2 GitOps repo + manifest migration | ⬜ |
-| 3 | B3 ArgoCD install + ApplicationSet | ⬜ |
+| 3 | B3 ArgoCD install + ApplicationSet + AppProject | ⬜ |
+| 3 | B3.5 ArgoCD Notifications → Slack | ⬜ |
 | 3 | B7 Flyway Job + sync-wave | ⬜ |
 | 4 | B5 HPA + PDB cho production overlay | ⬜ |
-| 4 | B3.4 ArgoCD Notifications → Slack | ⬜ |
 
 ### Tháng 3 — Hardening + delivery patterns
 | Tuần | Task | Done |
@@ -680,7 +800,7 @@ spec:
 | 3 | B8 Argo Rollouts canary cho catalog | ⬜ |
 | 3 | A3.1 Audit log + immutable storage | ⬜ |
 | 4 | A2.4 mTLS via Linkerd | ⬜ |
-| 4 | B9 Disaster recovery runbook + drill | ⬜ |
+| 4 | B9 + B10 Disaster recovery runbook + production readiness drill | ⬜ |
 
 ---
 
@@ -750,5 +870,6 @@ spec:
 | B7 (DB migrations) | (mới — chưa có trong senior roadmap, complementary) |
 | B8 (Argo Rollouts) | Giai đoạn 5.6 (canary) |
 | B9 (DR runbook) | (mới — production-readiness) |
+| B10 (Production readiness checklist) | Giai đoạn 7 (AWS production hardening) |
 
 > File này tập trung **hành động cụ thể với codebase hiện tại**, senior-roadmap tập trung **kỹ năng + giai đoạn học**. Đọc song song.

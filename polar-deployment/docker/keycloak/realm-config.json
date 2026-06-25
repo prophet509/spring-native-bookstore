@@ -24,12 +24,14 @@
       "enabled": true,
       "clientAuthenticatorType": "none",
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "redirectUris": [
-        "http://localhost:9000/login/oauth2/code/keycloak"
+        "http://localhost:9000/login/oauth2/code/keycloak",
+        "https://*/login/oauth2/code/keycloak"
       ],
       "webOrigins": [
-        "http://localhost:9000"
+        "http://localhost:9000",
+        "https://*"
       ],
       "publicClient": true,
       "protocol": "openid-connect",

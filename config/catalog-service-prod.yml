@@ -1,6 +1,17 @@
 polar:
   greeting: "Welcome to the production catalog from the config server"
 
+server:
+  ssl:
+    enabled: ${MTLS_ENABLED:false}
+    client-auth: ${BACKEND_MTLS_CLIENT_AUTH:need}
+    key-store: ${MTLS_KEY_STORE:}
+    key-store-password: ${MTLS_KEY_STORE_PASSWORD:}
+    key-store-type: ${MTLS_KEY_STORE_TYPE:PKCS12}
+    trust-store: ${MTLS_TRUST_STORE:}
+    trust-store-password: ${MTLS_TRUST_STORE_PASSWORD:}
+    trust-store-type: ${MTLS_TRUST_STORE_TYPE:PKCS12}
+
 spring:
   cloud:
     config:

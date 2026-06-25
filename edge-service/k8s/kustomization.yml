@@ -27,3 +27,9 @@ secretGenerator:
       disableNameSuffixHash: true
       labels:
         spring.cloud.kubernetes.secret: "true"
+  - name: edge-service-mtls-certs
+    files:
+      - keystore.p12=certs/keystore.p12
+      - truststore.p12=certs/truststore.p12
+    options:
+      disableNameSuffixHash: true

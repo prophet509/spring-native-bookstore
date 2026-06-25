@@ -59,11 +59,30 @@ spec:
               value: "polar-kafka:19092"
             - name: REDIS_HOST
               value: "polar-redis"
+            - name: MTLS_ENABLED
+              value: "false"
+            - name: MTLS_KEY_STORE
+              value: "/etc/mtls/keystore.p12"
+            - name: MTLS_KEY_STORE_PASSWORD
+              value: ""
+            - name: MTLS_KEY_STORE_TYPE
+              value: "PKCS12"
+            - name: MTLS_TRUST_STORE
+              value: "/etc/mtls/truststore.p12"
+            - name: MTLS_TRUST_STORE_PASSWORD
+              value: ""
+            - name: MTLS_TRUST_STORE_TYPE
+              value: "PKCS12"
+            - name: BACKEND_MTLS_CLIENT_AUTH
+              value: "need"
           volumeMounts:
             - name: inventory-service-volume
               mountPath: /workspace/config
             - name: inventory-service-volume-secret
               mountPath: /workspace/secrets/inventory-service
+              readOnly: true
+            - name: mtls-certs
+              mountPath: /etc/mtls
               readOnly: true
       volumes:
         - name: inventory-service-volume
@@ -72,3 +91,7 @@ spec:
         - name: inventory-service-volume-secret
           secret:
             secretName: inventory-service
+        - name: mtls-certs
+          secret:
+            secretName: inventory-service-mtls-certs
+            optional: true

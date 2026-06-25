@@ -63,11 +63,46 @@ spec:
               value: "polar-redis"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
               value: "http://polar-keycloak:8080/realms/PolarBookshop"
+            - name: MTLS_ENABLED
+              value: "false"
+            - name: MTLS_KEY_STORE
+              value: "/etc/mtls/keystore.p12"
+            - name: MTLS_KEY_STORE_PASSWORD
+              value: ""
+            - name: MTLS_KEY_STORE_TYPE
+              value: "PKCS12"
+            - name: MTLS_TRUST_STORE
+              value: "/etc/mtls/truststore.p12"
+            - name: MTLS_TRUST_STORE_PASSWORD
+              value: ""
+            - name: MTLS_TRUST_STORE_TYPE
+              value: "PKCS12"
+            - name: BACKEND_MTLS_CLIENT_AUTH
+              value: "need"
+            - name: ORDER_HTTP_CLIENT_MTLS_ENABLED
+              value: "false"
+            - name: POLAR_HTTP_CLIENT_MTLS_ENABLED
+              value: "false"
+            - name: POLAR_HTTP_CLIENT_MTLS_KEY_STORE
+              value: "/etc/mtls/keystore.p12"
+            - name: POLAR_HTTP_CLIENT_MTLS_KEY_STORE_PASSWORD
+              value: ""
+            - name: POLAR_HTTP_CLIENT_MTLS_KEY_STORE_TYPE
+              value: "PKCS12"
+            - name: POLAR_HTTP_CLIENT_MTLS_TRUST_STORE
+              value: "/etc/mtls/truststore.p12"
+            - name: POLAR_HTTP_CLIENT_MTLS_TRUST_STORE_PASSWORD
+              value: ""
+            - name: POLAR_HTTP_CLIENT_MTLS_TRUST_STORE_TYPE
+              value: "PKCS12"
           volumeMounts:
             - name: order-service-volume
               mountPath: /workspace/config
             - name: order-service-volume-secret
               mountPath: /workspace/secrets/order-service
+              readOnly: true
+            - name: mtls-certs
+              mountPath: /etc/mtls
               readOnly: true
       volumes:
         - name: order-service-volume
@@ -76,3 +111,7 @@ spec:
         - name: order-service-volume-secret
           secret:
             secretName: order-service
+        - name: mtls-certs
+          secret:
+            secretName: order-service-mtls-certs
+            optional: true

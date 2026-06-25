@@ -540,43 +540,32 @@ Order cancel đến TRƯỚC order place (do network retry) → stock released c
 
 ---
 
-### 4.1 Outbox Pattern
+### 4.1 Outbox Pattern ✅
 
-**Service:** `order-service`
+**Service:** `order-service`, `inventory-service`, `catalog-service`
 
 **Tại sao Senior cần biết:**
 Save DB thành công + publish Kafka fail = data inconsistency. Outbox giải quyết bằng cách ghi event vào cùng transaction với business data.
 
-**Tasks:**
-- [ ] Tạo Flyway migration:
-  ```sql
-  CREATE TABLE outbox_events (
-      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      aggregate_type VARCHAR(50) NOT NULL,
-      aggregate_id   VARCHAR(100) NOT NULL,
-      event_type     VARCHAR(100) NOT NULL,
-      payload        JSONB NOT NULL,
-      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      processed_at   TIMESTAMPTZ,
-      status         VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-      retry_count    INTEGER NOT NULL DEFAULT 0
-  );
-  CREATE INDEX idx_outbox_pending ON outbox_events (created_at) WHERE status = 'PENDING';
-  ```
-- [ ] Trong cùng DB transaction: save Order + insert outbox_events
-- [ ] Tạo `OutboxPoller` (Spring Scheduling): PENDING → publish Kafka → SENT
-- [ ] Retry: FAILED sau 3 lần → DLQ + alert
-- [ ] Test: Kill Kafka → đặt hàng → restart Kafka → event tự gửi lại
-- [ ] **Senior Insight:** Outbox Poller có 2 variants:
-  - **Polling-based** (đơn giản, đủ cho project này)
-  - **CDC (Debezium)** (enterprise-grade, capture WAL stream) — **nên đọc hiểu** dù không implement
+**Đã hoàn thành:** Dùng **Debezium CDC** (không phải polling-based). Xem `docs/tasks/saga-outbox-plan.md` cho chi tiết đầy đủ.
+
+**Kiến trúc đã implement:**
+- Mỗi service có `outbox_event` table (Flyway `V6__create_outbox_event.sql`) với columns: `id`, `aggregate_type`, `aggregate_id`, `type`, `destination`, `payload` (JSONB), `trace_id`, `created_at`
+- Publisher adapter (`OutboxXxxEventPublisher`) insert row vào cùng transaction với aggregate save
+- Debezium PostgreSQL connector tail WAL → Outbox Event Router SMT → publish to Kafka topic theo `destination` column
+- `trace_id` column lưu W3C traceparent, Debezium map thành Kafka header
+- Outbox retention qua `make outbox-cleanup` (SQL-based, không dùng `pg_cron`)
+
+**Không dùng polling-based:** Không có `OutboxPoller`, không có `status`/`attempts`/`processed_at` columns. Debezium đọc trực tiếp từ WAL → at-least-once delivery.
+
+**Senior Insight:** Outbox có 2 variants:
+  - **Polling-based** (đơn giản, nhưng cần leader election + retry logic)
+  - **CDC (Debezium)** (enterprise-grade, capture WAL stream) — **đã chọn implement** cho project này
 
 **Verify:**
 ```bash
-docker stop kafka
-# Place order → outbox status = PENDING
-docker start kafka
-# Event published → outbox status = SENT
+# Outbox đã được stress-tested: 1000 req / 50 concurrency = 100% success
+# Xem saga-outbox-plan.md §3.2 cho kết quả chi tiết
 ```
 
 ---
@@ -695,52 +684,39 @@ time curl http://localhost:9001/books/isbn-123  # cache hit — faster
 
 ---
 
-### 4.4 Saga Pattern — PlaceOrder Choreography
+### 4.4 Saga Pattern — PlaceOrder Choreography ✅
 
-**Service:** `order-service`, `inventory-service`
+**Service:** `order-service`, `inventory-service`, `dispatcher-service`
 
 **Tại sao Senior cần biết:**
 Không có distributed transaction trong microservices. Saga = eventual consistency với compensation. Senior hiểu khi nào dùng **Choreography** vs **Orchestration**.
 
-**Luồng Saga:**
+**Đã hoàn thành:** Choreography-based saga với Outbox + Debezium. Xem `docs/tasks/saga-outbox-plan.md`.
+
+**Luồng Saga đã implement:**
 ```
 PlaceOrder Saga (Choreography-based):
-  Step 1: order-service     → Save Order (PENDING)      → publish OrderPlaced
-  Step 2: inventory-service → Reserve Stock              → publish StockReserved | StockInsufficient
-  Step 3: order-service     → [StockReserved]  → CONFIRMED
-          order-service     → [StockInsufficient] → CANCELLED
-  Step 4: inventory-service → [OrderCancelled] → Release Stock
-
-Compensation:
-  Nếu bất kỳ step fail → ngược lại từ step fail trở về trước
-  StockReserved → OrderConfirmed → OK
-  StockInsufficient → Order CANCELLED → Release Stock (if reserved)
+  Step 1: order-service     → Save Order + outbox row → Debezium → order-created-events
+  Step 2: inventory-service → Reserve Stock + outbox row → Debezium → inventory-events
+  Step 3: order-service     → [reserved] → ACCEPTED + outbox row → Debezium → order-accepted
+          order-service     → [rejected] → CANCELLED (compensation)
+  Step 4: dispatcher-service → [order-accepted] → dispatch → order-dispatched
+  Step 5: order-service     → [order-dispatched] → DISPATCHED
 ```
 
-**Tasks:**
-- [ ] Map Saga flow trên giấy/diagram TRƯỚC khi code
-- [ ] Implement compensation logic:
-  - `order-service`: `StockReservationFailed` → Order = CANCELLED
-  - `inventory-service`: `OrderCancelled` → release reserved stock
-- [ ] **Idempotency** cho mỗi step — dùng eventId/orderId
-- [ ] **Saga timeout:** Nếu 5 phút không nhận response → tự động cancel
-  ```java
-  @Scheduled(fixedRate = 60000)
-  void checkStaleOrders() {
-      List<Order> stale = orderRepository.findByStatusAndCreatedAtBefore(
-          Status.PENDING, Instant.now().minus(5, ChronoUnit.MINUTES));
-      stale.forEach(order -> cancelOrder(order, "Saga timeout"));
-  }
-  ```
-- [ ] Test end-to-end: simulate `StockInsufficient` → verify Order = CANCELLED, stock unchanged
-- [ ] **Senior Insight:** Choreography (event-based) vs Orchestration (central coordinator):
+**Idempotency đã implement:**
+- inventory: `reservationPort.findByOrderId` short-circuit + Redis claim
+- search: idempotent upsert/delete by ISBN
+
+**Stress test đã pass:** 1000 orders / 50 concurrency = 100% DISPATCHED, exactly 1000 inventory consumed.
+
+**Senior Insight:** Choreography (event-based) vs Orchestration (central coordinator):
   - **Choreography:** Simple, loose coupling, hard to track. Good for 3-4 services.
   - **Orchestration:** Central saga orchestrator, easier tracking, more coupling. Good for complex sagas.
   - Dự án này dùng **Choreography** — phù hợp vì chỉ có 2-3 services tham gia.
 
 **Verify:**
-- Place order với quantity > available stock
-- Verify: Order status = CANCELLED, stock unchanged in DB
+- Xem `docs/tasks/saga-outbox-plan.md` §3.2 cho kết quả stress test chi tiết
 
 ---
 
@@ -1542,10 +1518,10 @@ Internet → Route53 → ALB → EKS Cluster
 | 3 | Dead Letter Queue (DLQ) | ⬜ |
 | 3 | Exactly-Once & Idempotent Consumer | ⬜ |
 | 3 | Message Ordering & Priority | ⬜ |
-| 4 | Outbox Pattern | ⬜ |
+| 4 | Outbox Pattern | ✅ |
 | 4 | Circuit Breaker + Retry + Bulkhead | ⬜ |
 | 4 | Caching (Read-Through & Cache-Aside) | ⬜ |
-| 4 | Saga Pattern (Choreography) | ⬜ |
+| 4 | Saga Pattern (Choreography) | ✅ |
 | 5 | Reactive Deep Dive (Backpressure) | ⬜ |
 | 5 | Virtual Threads vs Reactive | ⬜ |
 | 6 | Security Headers & OWASP Top 10 | ⬜ |

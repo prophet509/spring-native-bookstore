@@ -23,7 +23,7 @@ services:
       - SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL=2000
       - SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL=5000
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=polar-kafka:19092
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://polar-postgres-catalog:5432/polardb_catalog
+      - SPRING_DATASOURCE_URL=jdbc:mysql://polar-mysql-catalog:3306/polardb_catalog?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://polar-keycloak:8080/realms/PolarBookshop
     labels:
       service_name: catalog-service

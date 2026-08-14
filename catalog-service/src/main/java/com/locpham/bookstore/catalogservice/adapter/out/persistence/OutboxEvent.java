@@ -16,17 +16,17 @@ import org.springframework.data.relational.core.mapping.Table;
  */
 @Table("outbox_event")
 public record OutboxEvent(
-        @Id UUID id,
+        @Id String id,
         String aggregateType,
         String aggregateId,
         String type,
         String destination,
         JsonbPayload payload,
         String traceId)
-        implements Persistable<UUID> {
+        implements Persistable<String> {
 
     @Override
-    public UUID getId() {
+    public String getId() {
         return id;
     }
 

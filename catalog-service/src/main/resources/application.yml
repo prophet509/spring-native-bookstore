@@ -30,9 +30,10 @@ spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   datasource:
-    url: jdbc:postgresql://localhost:5432/polardb_catalog
+    url: jdbc:mysql://localhost:3306/polardb_catalog?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     username: user
     password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       connection-timeout: 2000
       maximum-pool-size: 5

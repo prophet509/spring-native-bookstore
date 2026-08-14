@@ -2,42 +2,39 @@ package com.locpham.bookstore.orderservice.adapter.in.messaging;
 
 import com.locpham.bookstore.orderservice.application.command.MarkOrderDispatchedCommand;
 import com.locpham.bookstore.orderservice.application.port.in.MarkOrderDispatchedUseCase;
-import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import reactor.core.publisher.Flux;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-@Configuration
+@Component
 public class OrderDispatchedConsumerAdapter {
     private static final Logger logger =
             LoggerFactory.getLogger(OrderDispatchedConsumerAdapter.class);
 
-    @Bean
-    public Consumer<Flux<OrderDispatchedMessage>> dispatchOrder(
-            MarkOrderDispatchedUseCase markOrderDispatchedUseCase) {
-        return flux ->
-                flux.flatMap(
-                                message -> {
-                                    var command = new MarkOrderDispatchedCommand(message.orderId());
-                                    return markOrderDispatchedUseCase
-                                            .markOrderDispatched(command)
-                                            .onErrorResume(
-                                                    e -> {
-                                                        logger.error(
-                                                                "Failed to mark order dispatched for orderId={}",
-                                                                message.orderId(),
-                                                                e);
-                                                        return Mono.empty();
-                                                    });
-                                },
-                                8) // max 8 concurrent to avoid pool exhaustion
-                        .doOnNext(
-                                order ->
-                                        logger.info(
-                                                "The order with id {} is dispatched", order.id()))
-                        .subscribe();
+    private final MarkOrderDispatchedUseCase markOrderDispatchedUseCase;
+
+    public OrderDispatchedConsumerAdapter(MarkOrderDispatchedUseCase markOrderDispatchedUseCase) {
+        this.markOrderDispatchedUseCase = markOrderDispatchedUseCase;
+    }
+
+    @KafkaListener(
+            topics = "${polar.kafka.topics.order-dispatched:order-dispatched}",
+            groupId = "${spring.kafka.consumer.group-id:order-service}")
+    public Mono<Void> dispatchOrder(OrderDispatchedMessage message) {
+        var command = new MarkOrderDispatchedCommand(message.orderId());
+        return markOrderDispatchedUseCase
+                .markOrderDispatched(command)
+                .onErrorResume(
+                        e -> {
+                            logger.error(
+                                    "Failed to mark order dispatched for orderId={}",
+                                    message.orderId(),
+                                    e);
+                            return Mono.empty();
+                        })
+                .doOnNext(order -> logger.info("The order with id {} is dispatched", order.id()))
+                .then();
     }
 }

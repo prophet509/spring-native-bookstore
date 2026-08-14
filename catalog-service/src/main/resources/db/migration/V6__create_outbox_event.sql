@@ -1,12 +1,12 @@
 CREATE TABLE outbox_event (
-    id             UUID PRIMARY KEY,
-    aggregate_type TEXT NOT NULL,
-    aggregate_id   TEXT NOT NULL,
-    type           TEXT NOT NULL,
-    destination    TEXT NOT NULL,
-    payload        JSONB NOT NULL,
-    trace_id       TEXT,
-    created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+    id             VARCHAR(36) PRIMARY KEY,
+    aggregate_type VARCHAR(255) NOT NULL,
+    aggregate_id   VARCHAR(255) NOT NULL,
+    type           VARCHAR(255) NOT NULL,
+    destination    VARCHAR(255) NOT NULL,
+    payload        JSON NOT NULL,
+    trace_id       VARCHAR(255),
+    created_at     DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
 );
 
 CREATE INDEX outbox_event_aggregate_idx ON outbox_event (aggregate_type, aggregate_id);

@@ -6,6 +6,18 @@ build:
   local:
     push: false
   artifacts:
+    - image: pxloc97/catalog-service
+      context: catalog-service
+      buildpacks:
+        builder: paketobuildpacks/builder-jammy-base
+        env:
+          - BP_JVM_VERSION=21.*
+    - image: pxloc97/order-service
+      context: order-service
+      buildpacks:
+        builder: paketobuildpacks/builder-jammy-base
+        env:
+          - BP_JVM_VERSION=21.*
     - image: pxloc97/edge-service
       context: edge-service
       buildpacks:
@@ -34,7 +46,18 @@ manifests:
   rawYaml:
     - config-service/k8s/deployment.yml
     - config-service/k8s/service.yml
+    - polar-deployment/kubernetes/local/mysql.yml
+    - polar-deployment/kubernetes/local/postgresql-order.yml
+    - polar-deployment/kubernetes/local/postgresql-inventory.yml
+    - polar-deployment/kubernetes/local/postgresql-keycloak.yml
+    - polar-deployment/kubernetes/local/keycloak.yml
+    - polar-deployment/kubernetes/local/redis.yml
     - polar-deployment/kubernetes/local/kafka.yml
+    - polar-deployment/kubernetes/local/elasticsearch.yml
+    - catalog-service/k8s/deployment.yml
+    - catalog-service/k8s/service.yml
+    - order-service/k8s/deployment.yml
+    - order-service/k8s/service.yml
     - edge-service/k8s/deployment.yml
     - edge-service/k8s/service.yml
     - edge-service/k8s/ingress.yml
@@ -42,7 +65,6 @@ manifests:
     - dispatcher-service/k8s/service.yml
     - inventory-service/k8s/deployment.yml
     - inventory-service/k8s/service.yml
-    - polar-deployment/kubernetes/local/elasticsearch.yml
     - search-service/k8s/deployment.yml
     - search-service/k8s/service.yml
 deploy:

@@ -27,16 +27,16 @@ spring:
         initial-interval: 1000
         max-interval: 2000
         multiplier: 1.1
-    function:
-      definition: reserveStock;releaseStock
-    stream:
-      bindings:
-        reserveStock-in-0:
-          destination: order-created-events
-          group: ${spring.application.name}
-        releaseStock-in-0:
-          destination: order-cancelled-events
-          group: ${spring.application.name}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${spring.application.name}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
   r2dbc:
     url: r2dbc:postgresql://localhost:5434/polardb_inventory
     username: user
@@ -51,8 +51,6 @@ spring:
     password: ${spring.r2dbc.password}
     url: jdbc:postgresql://localhost:5434/polardb_inventory
     baseline-on-migrate: true
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   data:
     redis:
       host: ${REDIS_HOST:localhost}

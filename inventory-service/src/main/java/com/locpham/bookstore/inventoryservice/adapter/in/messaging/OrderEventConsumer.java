@@ -6,18 +6,16 @@ import com.locpham.bookstore.inventoryservice.application.port.in.ReleaseStockUs
 import com.locpham.bookstore.inventoryservice.application.port.in.ReserveStockUseCase;
 import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import java.time.Duration;
-import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
-import reactor.core.publisher.Flux;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
-@Configuration
+@Component
 public class OrderEventConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderEventConsumer.class);
@@ -30,70 +28,65 @@ public class OrderEventConsumer {
                     .jitter(0.5)
                     .filter(throwable -> throwable instanceof OptimisticLockingFailureException);
 
-    @Bean
-    public Consumer<Flux<OrderCreatedMessage>> reserveStock(
-            ReserveStockUseCase reserveStockUseCase) {
-        return flux ->
-                flux.flatMap(
-                                message -> {
-                                    logger.info(
-                                            "Received order.created event orderId={} items={}",
-                                            message.orderId(),
-                                            message.items().size());
-                                    return reserveStockUseCase
-                                            .reserveForOrder(toReserveRequest(message))
-                                            .retryWhen(OPTIMISTIC_LOCK_RETRY)
-                                            .doOnSuccess(
-                                                    decision ->
-                                                            logger.info(
-                                                                    "Reservation decision orderId={} status={}",
-                                                                    decision.orderId(),
-                                                                    decision.status()))
-                                            .onErrorResume(
-                                                    DataIntegrityViolationException.class,
-                                                    e ->
-                                                            handleDuplicateReservation(
-                                                                    message.orderId(), e))
-                                            .onErrorResume(
-                                                    e -> {
-                                                        logger.error(
-                                                                "Failed to process reservation for orderId={}",
-                                                                message.orderId(),
-                                                                e);
-                                                        return Mono.empty();
-                                                    });
-                                },
-                                8)
-                        .subscribe();
+    private final ReserveStockUseCase reserveStockUseCase;
+    private final ReleaseStockUseCase releaseStockUseCase;
+
+    public OrderEventConsumer(
+            ReserveStockUseCase reserveStockUseCase, ReleaseStockUseCase releaseStockUseCase) {
+        this.reserveStockUseCase = reserveStockUseCase;
+        this.releaseStockUseCase = releaseStockUseCase;
     }
 
-    @Bean
-    public Consumer<Flux<OrderCancelledMessage>> releaseStock(
-            ReleaseStockUseCase releaseStockUseCase) {
-        return flux ->
-                flux.flatMap(
-                                message -> {
-                                    logger.info(
-                                            "Received order.cancelled event orderId={}",
-                                            message.orderId());
-                                    return releaseStockUseCase
-                                            .releaseForOrder(message.orderId())
-                                            .doOnSuccess(
-                                                    v ->
-                                                            logger.info(
-                                                                    "Stock release completed for orderId={}",
-                                                                    message.orderId()))
-                                            .onErrorResume(
-                                                    e -> {
-                                                        logger.error(
-                                                                "Failed to release stock for orderId={}",
-                                                                message.orderId(),
-                                                                e);
-                                                        return Mono.empty();
-                                                    });
-                                },
-                                8)
-                        .subscribe();
+    @KafkaListener(
+            topics = "${polar.kafka.topics.order-created-events:order-created-events}",
+            groupId = "${spring.kafka.consumer.group-id:inventory-service}")
+    public Mono<Void> reserveStock(OrderCreatedMessage message) {
+        logger.info(
+                "Received order.created event orderId={} items={}",
+                message.orderId(),
+                message.items().size());
+        return reserveStockUseCase
+                .reserveForOrder(toReserveRequest(message))
+                .retryWhen(OPTIMISTIC_LOCK_RETRY)
+                .doOnSuccess(
+                        decision ->
+                                logger.info(
+                                        "Reservation decision orderId={} status={}",
+                                        decision.orderId(),
+                                        decision.status()))
+                .onErrorResume(
+                        DataIntegrityViolationException.class,
+                        e -> handleDuplicateReservation(message.orderId(), e))
+                .onErrorResume(
+                        e -> {
+                            logger.error(
+                                    "Failed to process reservation for orderId={}",
+                                    message.orderId(),
+                                    e);
+                            return Mono.empty();
+                        })
+                .then();
+    }
+
+    @KafkaListener(
+            topics = "${polar.kafka.topics.order-cancelled-events:order-cancelled-events}",
+            groupId = "${spring.kafka.consumer.group-id:inventory-service}")
+    public Mono<Void> releaseStock(OrderCancelledMessage message) {
+        logger.info("Received order.cancelled event orderId={}", message.orderId());
+        return releaseStockUseCase
+                .releaseForOrder(message.orderId())
+                .doOnSuccess(
+                        v ->
+                                logger.info(
+                                        "Stock release completed for orderId={}",
+                                        message.orderId()))
+                .onErrorResume(
+                        e -> {
+                            logger.error(
+                                    "Failed to release stock for orderId={}", message.orderId(), e);
+                            return Mono.empty();
+                        })
+                .then();
     }
 
     private static ReserveStockUseCase.OrderReserveRequest toReserveRequest(

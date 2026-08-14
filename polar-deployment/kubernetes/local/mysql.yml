@@ -1,28 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: polar-postgres
+  name: polar-mysql
   labels:
-    db: polar-postgres
+    db: polar-mysql
 spec:
   selector:
     matchLabels:
-      db: polar-postgres
+      db: polar-mysql
   template:
     metadata:
       labels:
-        db: polar-postgres
+        db: polar-mysql
     spec:
       containers:
-        - name: polar-postgres
-          image: postgres:14.12
+        - name: polar-mysql
+          image: mysql:8.4
           env:
-            - name: POSTGRES_USER
-              value: user
-            - name: POSTGRES_PASSWORD
+            - name: MYSQL_ROOT_PASSWORD
               value: password
-            - name: POSTGRES_DB
+            - name: MYSQL_USER
+              value: user
+            - name: MYSQL_PASSWORD
+              value: password
+            - name: MYSQL_DATABASE
               value: polardb_catalog
+          ports:
+            - containerPort: 3306
           resources:
             requests:
               cpu: 250m
@@ -36,14 +40,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: polar-postgres
+  name: polar-mysql
   labels:
-    db: polar-postgres
+    db: polar-mysql
 spec:
   type: ClusterIP
   selector:
-    db: polar-postgres
+    db: polar-mysql
   ports:
     - protocol: TCP
-      port: 5432
-      targetPort: 5432
+      port: 3306
+      targetPort: 3306

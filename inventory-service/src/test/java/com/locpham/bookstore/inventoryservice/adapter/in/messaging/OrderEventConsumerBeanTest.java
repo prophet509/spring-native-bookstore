@@ -10,6 +10,7 @@ import com.locpham.bookstore.inventoryservice.application.port.in.ReleaseStockUs
 import com.locpham.bookstore.inventoryservice.application.port.in.ReserveStockUseCase;
 import com.locpham.bookstore.inventoryservice.domain.InventoryDecision;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -22,19 +23,22 @@ class OrderEventConsumerBeanTest {
     @Mock private ReserveStockUseCase reserveStockUseCase;
     @Mock private ReleaseStockUseCase releaseStockUseCase;
 
-    private final OrderEventConsumer consumer = new OrderEventConsumer();
+    private OrderEventConsumer consumer;
+
+    @BeforeEach
+    void setUp() {
+        consumer = new OrderEventConsumer(reserveStockUseCase, releaseStockUseCase);
+    }
 
     @Test
     void reserveStockDelegatesToUseCase() {
         given(reserveStockUseCase.reserveForOrder(any()))
                 .willReturn(Mono.just(InventoryDecision.reserved(1L)));
 
-        consumer.reserveStock(reserveStockUseCase)
-                .accept(
-                        reactor.core.publisher.Flux.just(
-                                new OrderCreatedMessage(
-                                        1L,
-                                        List.of(new OrderCreatedMessage.OrderItem("isbn", 2)))));
+        consumer.reserveStock(
+                        new OrderCreatedMessage(
+                                1L, List.of(new OrderCreatedMessage.OrderItem("isbn", 2))))
+                .block();
 
         verify(reserveStockUseCase).reserveForOrder(any());
     }
@@ -44,12 +48,10 @@ class OrderEventConsumerBeanTest {
         given(reserveStockUseCase.reserveForOrder(any()))
                 .willReturn(Mono.error(new RuntimeException("boom")));
 
-        consumer.reserveStock(reserveStockUseCase)
-                .accept(
-                        reactor.core.publisher.Flux.just(
-                                new OrderCreatedMessage(
-                                        2L,
-                                        List.of(new OrderCreatedMessage.OrderItem("isbn", 1)))));
+        consumer.reserveStock(
+                        new OrderCreatedMessage(
+                                2L, List.of(new OrderCreatedMessage.OrderItem("isbn", 1))))
+                .block();
 
         verify(reserveStockUseCase).reserveForOrder(any());
     }
@@ -58,8 +60,7 @@ class OrderEventConsumerBeanTest {
     void releaseStockDelegatesToUseCase() {
         given(releaseStockUseCase.releaseForOrder(3L)).willReturn(Mono.empty());
 
-        consumer.releaseStock(releaseStockUseCase)
-                .accept(reactor.core.publisher.Flux.just(new OrderCancelledMessage(3L)));
+        consumer.releaseStock(new OrderCancelledMessage(3L)).block();
 
         verify(releaseStockUseCase).releaseForOrder(3L);
     }
@@ -69,8 +70,7 @@ class OrderEventConsumerBeanTest {
         given(releaseStockUseCase.releaseForOrder(4L))
                 .willReturn(Mono.error(new RuntimeException("boom")));
 
-        consumer.releaseStock(releaseStockUseCase)
-                .accept(reactor.core.publisher.Flux.just(new OrderCancelledMessage(4L)));
+        consumer.releaseStock(new OrderCancelledMessage(4L)).block();
 
         verify(releaseStockUseCase).releaseForOrder(4L);
     }

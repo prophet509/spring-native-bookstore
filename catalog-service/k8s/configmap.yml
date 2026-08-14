@@ -12,5 +12,3 @@ data:
       cloud:
         config:
           uri: http://config-service
-        datasource:
-          url: jdbc:postgresql://polar-postgres-catalog/polardb_catalog

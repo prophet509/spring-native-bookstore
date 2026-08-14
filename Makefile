@@ -5,9 +5,10 @@ SERVICES := config catalog order inventory dispatcher edge
 MINIKUBE_PROFILE ?= polar
 KUBE_CONTEXT ?= $(MINIKUBE_PROFILE)
 K8S_PLATFORM_FILES := \
-	polar-deployment/kubernetes/local/postgresql.yml \
+	polar-deployment/kubernetes/local/mysql.yml \
 	polar-deployment/kubernetes/local/postgresql-order.yml \
 	polar-deployment/kubernetes/local/postgresql-inventory.yml \
+	polar-deployment/kubernetes/local/postgresql-keycloak.yml \
 	polar-deployment/kubernetes/local/keycloak.yml \
 	polar-deployment/kubernetes/local/redis.yml \
 	polar-deployment/kubernetes/local/kafka.yml \

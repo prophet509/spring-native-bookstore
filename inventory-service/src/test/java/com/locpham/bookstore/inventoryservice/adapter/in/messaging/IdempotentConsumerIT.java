@@ -39,7 +39,7 @@ import reactor.test.StepVerifier;
 @SpringBootTest(
         classes = InventoryServiceApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = {"spring.cloud.config.enabled=false", "spring.cloud.stream.enabled=false"})
+        properties = {"spring.cloud.config.enabled=false"})
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
 class IdempotentConsumerIT {

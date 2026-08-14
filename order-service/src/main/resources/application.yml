@@ -26,25 +26,18 @@ spring:
         initial-interval: 1000
         max-interval: 2000
         multiplier: 1.1
-    function:
-      definition: dispatchOrder;handleInventoryDecision;handleBookCreated;handleBookUpdated;handleBookDeleted
-    stream:
-      bindings:
-        dispatchOrder-in-0:
-          destination: order-dispatched
-          group: ${spring.application.name}
-        handleInventoryDecision-in-0:
-          destination: inventory-events
-          group: ${spring.application.name}
-        handleBookCreated-in-0:
-          destination: book.created
-          group: ${spring.application.name}
-        handleBookUpdated-in-0:
-          destination: book.updated
-          group: ${spring.application.name}
-        handleBookDeleted-in-0:
-          destination: book.deleted
-          group: ${spring.application.name}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      concurrency: 3
+    consumer:
+      group-id: ${spring.application.name}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -64,8 +57,6 @@ spring:
     password: ${spring.r2dbc.password}
     url: jdbc:postgresql://localhost:5433/polardb_order
     baseline-on-migrate: true
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   security:
     oauth2:
       resourceserver:

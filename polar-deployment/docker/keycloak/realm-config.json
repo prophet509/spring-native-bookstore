@@ -24,7 +24,7 @@
       "enabled": true,
       "clientAuthenticatorType": "none",
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "redirectUris": [
         "http://localhost:9000/login/oauth2/code/keycloak",
         "https://*/login/oauth2/code/keycloak"

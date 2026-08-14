@@ -46,7 +46,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.retry:spring-retry'
-    implementation 'org.springframework.cloud:spring-cloud-stream-binder-kafka'
+    implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
@@ -62,8 +62,7 @@ dependencies {
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'org.springframework.cloud:spring-cloud-stream'
-    testImplementation 'org.springframework.cloud:spring-cloud-stream-test-binder'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:r2dbc'

@@ -66,7 +66,7 @@ public class OutboxBookEventPublisher implements BookEventPublisher {
         }
         outboxRepository.save(
                 new OutboxEvent(
-                        UUID.randomUUID(),
+                        UUID.randomUUID().toString(),
                         AGGREGATE_TYPE,
                         isbn,
                         type,

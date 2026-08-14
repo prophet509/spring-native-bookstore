@@ -5,7 +5,9 @@ import static org.springframework.security.test.web.reactive.server.SecurityMock
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.locpham.bookstore.orderservice.adapter.in.messaging.InventoryDecisionConsumerAdapter;
 import com.locpham.bookstore.orderservice.adapter.in.messaging.InventoryDecisionMessage;
+import com.locpham.bookstore.orderservice.adapter.in.messaging.OrderDispatchedConsumerAdapter;
 import com.locpham.bookstore.orderservice.adapter.in.messaging.OrderDispatchedMessage;
 import com.locpham.bookstore.orderservice.adapter.in.web.dto.OrderRequest;
 import com.locpham.bookstore.orderservice.application.port.out.OrderQueryPort;
@@ -22,13 +24,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.stream.binder.test.InputDestination;
-import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -43,10 +42,10 @@ import reactor.test.StepVerifier;
 /**
  * End-to-end test for the order saga. After the legacy-publish cutover the publish path is
  * Debezium-tailing-the-outbox, so this test asserts <em>outbox_event</em> rows instead of Kafka
- * channel output. Inbound messages still flow through Spring Cloud Stream's test binder.
+ * channel output.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({TestcontainersConfiguration.class, TestChannelBinderConfiguration.class})
+@Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("http-fallback")
 class OrderServiceApplicationTests {
@@ -55,7 +54,8 @@ class OrderServiceApplicationTests {
 
     @Autowired private ApplicationContext context;
     @Autowired private OrderQueryPort orderQueryPort;
-    @Autowired private InputDestination input;
+    @Autowired private InventoryDecisionConsumerAdapter inventoryDecisionConsumer;
+    @Autowired private OrderDispatchedConsumerAdapter orderDispatchedConsumer;
     @Autowired private DSLContext dsl;
     private ObjectMapper objectMapper;
 
@@ -125,28 +125,16 @@ class OrderServiceApplicationTests {
         assertThat(orderId).isNotNull();
 
         // 3. Simulate inventory reserving stock and publishing the decision back through Kafka.
-        var inventoryPayload =
-                objectMapper.writeValueAsBytes(
-                        new InventoryDecisionMessage(orderId, "RESERVED", null));
-        input.send(
-                MessageBuilder.withPayload(inventoryPayload)
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .build(),
-                "handleInventoryDecision-in-0");
+        inventoryDecisionConsumer
+                .handleInventoryDecision(new InventoryDecisionMessage(orderId, "RESERVED", null))
+                .block();
 
         // 4. Verify OrderAccepted outbox row appears for the same order.
         Long acceptedOrderId = awaitOutboxRowFor(orderId, "OrderAccepted", "order-accepted");
         assertThat(acceptedOrderId).isEqualTo(orderId);
 
         // 5. Simulate dispatch and verify the order moves to DISPATCHED.
-        var jsonPayload = objectMapper.writeValueAsBytes(new OrderDispatchedMessage(orderId));
-        input.send(
-                MessageBuilder.withPayload(jsonPayload)
-                        .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .build(),
-                "dispatchOrder-in-0");
-
-        Thread.sleep(2000);
+        orderDispatchedConsumer.dispatchOrder(new OrderDispatchedMessage(orderId)).block();
 
         StepVerifier.create(orderQueryPort.findById(orderId))
                 .assertNext(order -> assertThat(order.status()).isEqualTo(OrderStatus.DISPATCHED))

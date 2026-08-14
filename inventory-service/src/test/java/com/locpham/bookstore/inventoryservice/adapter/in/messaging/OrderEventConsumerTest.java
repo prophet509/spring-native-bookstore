@@ -13,18 +13,15 @@ import com.locpham.bookstore.inventoryservice.domain.ReservationStatus;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -40,7 +37,7 @@ import reactor.test.StepVerifier;
 @SpringBootTest(
         classes = InventoryServiceApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
-        properties = {"spring.cloud.config.enabled=false", "spring.cloud.stream.enabled=false"})
+        properties = {"spring.cloud.config.enabled=false"})
 @Import(TestcontainersConfiguration.class)
 @Testcontainers(disabledWithoutDocker = true)
 class OrderEventConsumerTest {
@@ -48,14 +45,7 @@ class OrderEventConsumerTest {
     @Autowired private JooqInventoryRepositoryImpl inventoryRepository;
     @Autowired private JooqReservationRepositoryImpl reservationRepository;
     @Autowired private DSLContext dsl;
-
-    @Autowired
-    @Qualifier("reserveStock")
-    private Consumer<Flux<OrderCreatedMessage>> reserveStock;
-
-    @Autowired
-    @Qualifier("releaseStock")
-    private Consumer<Flux<OrderCancelledMessage>> releaseStock;
+    @Autowired private OrderEventConsumer orderEventConsumer;
 
     @MockitoBean private ReactiveJwtDecoder jwtDecoder;
 
@@ -69,7 +59,7 @@ class OrderEventConsumerTest {
                 new OrderCreatedMessage(
                         orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)));
 
-        reserveStock.accept(Flux.just(message));
+        orderEventConsumer.reserveStock(message).block();
 
         // Stock decremented + outbox row appended (atomic).
         StepVerifier.create(awaitStock(isbn, 8, 2))
@@ -91,10 +81,11 @@ class OrderEventConsumerTest {
         inventoryRepository.save(InventoryItem.create(isbn, 10)).block();
 
         var orderId = System.nanoTime();
-        reserveStock.accept(
-                Flux.just(
+        orderEventConsumer
+                .reserveStock(
                         new OrderCreatedMessage(
-                                orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2)))));
+                                orderId, List.of(new OrderCreatedMessage.OrderItem(isbn, 2))))
+                .block();
 
         StepVerifier.create(awaitStock(isbn, 8, 2))
                 .assertNext(
@@ -104,7 +95,7 @@ class OrderEventConsumerTest {
                         })
                 .verifyComplete();
 
-        releaseStock.accept(Flux.just(new OrderCancelledMessage(orderId)));
+        orderEventConsumer.releaseStock(new OrderCancelledMessage(orderId)).block();
 
         StepVerifier.create(awaitStock(isbn, 10, 0))
                 .assertNext(

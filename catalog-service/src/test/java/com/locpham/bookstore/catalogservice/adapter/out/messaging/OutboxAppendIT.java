@@ -40,7 +40,7 @@ class OutboxAppendIT {
         Map<String, Object> row =
                 jdbcTemplate.queryForMap(
                         "SELECT aggregate_type, aggregate_id, type, destination,"
-                                + " CAST(payload AS VARCHAR) AS payload"
+                                + " CAST(payload AS CHAR) AS payload"
                                 + " FROM outbox_event WHERE aggregate_id = ?",
                         isbn);
 

@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,10 +25,8 @@ class BookEventConsumerTest {
     void handleBookCreatedUpsertsSnapshot() {
         given(snapshotPort.upsert("isbn-1", "Title", 9.99)).willReturn(Mono.just(1L));
 
-        consumer.handleBookCreated()
-                .accept(
-                        Flux.just(
-                                new BookCreatedMessage("isbn-1", "Title", "Author", 9.99, "Pub")));
+        consumer.handleBookCreated(new BookCreatedMessage("isbn-1", "Title", "Author", 9.99, "Pub"))
+                .block();
 
         verify(snapshotPort).upsert("isbn-1", "Title", 9.99);
     }
@@ -38,8 +35,8 @@ class BookEventConsumerTest {
     void handleBookUpdatedUpsertsSnapshot() {
         given(snapshotPort.upsert("isbn-2", "New", 5.0)).willReturn(Mono.just(1L));
 
-        consumer.handleBookUpdated()
-                .accept(Flux.just(new BookUpdatedMessage("isbn-2", "New", "Author", 5.0, "Pub")));
+        consumer.handleBookUpdated(new BookUpdatedMessage("isbn-2", "New", "Author", 5.0, "Pub"))
+                .block();
 
         verify(snapshotPort).upsert("isbn-2", "New", 5.0);
     }
@@ -48,7 +45,7 @@ class BookEventConsumerTest {
     void handleBookDeletedRemovesSnapshot() {
         given(snapshotPort.deleteByIsbn("isbn-3")).willReturn(Mono.just(1L));
 
-        consumer.handleBookDeleted().accept(Flux.just(new BookDeletedMessage("isbn-3")));
+        consumer.handleBookDeleted(new BookDeletedMessage("isbn-3")).block();
 
         verify(snapshotPort).deleteByIsbn("isbn-3");
     }

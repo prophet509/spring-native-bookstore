@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,9 +23,9 @@ class OrderDispatchedConsumerAdapterTest {
         var order = Order.createAccepted("1234567890", "Title", 9.99, 1);
         given(markOrderDispatchedUseCase.markOrderDispatched(any())).willReturn(Mono.just(order));
 
-        new OrderDispatchedConsumerAdapter()
-                .dispatchOrder(markOrderDispatchedUseCase)
-                .accept(Flux.just(new OrderDispatchedMessage(7L)));
+        new OrderDispatchedConsumerAdapter(markOrderDispatchedUseCase)
+                .dispatchOrder(new OrderDispatchedMessage(7L))
+                .block();
 
         verify(markOrderDispatchedUseCase).markOrderDispatched(new MarkOrderDispatchedCommand(7L));
     }
@@ -36,9 +35,9 @@ class OrderDispatchedConsumerAdapterTest {
         given(markOrderDispatchedUseCase.markOrderDispatched(any()))
                 .willReturn(Mono.error(new RuntimeException("boom")));
 
-        new OrderDispatchedConsumerAdapter()
-                .dispatchOrder(markOrderDispatchedUseCase)
-                .accept(Flux.just(new OrderDispatchedMessage(8L)));
+        new OrderDispatchedConsumerAdapter(markOrderDispatchedUseCase)
+                .dispatchOrder(new OrderDispatchedMessage(8L))
+                .block();
 
         verify(markOrderDispatchedUseCase).markOrderDispatched(any());
     }

@@ -66,7 +66,7 @@ spec:
             - name: REDIS_HOST
               value: "polar-redis"
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://polar-postgres:5432/polardb_catalog"
+              value: "jdbc:mysql://polar-mysql:3306/polardb_catalog?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
             - name: SPRING_DATASOURCE_USERNAME
               value: "user"
             - name: SPRING_DATASOURCE_PASSWORD

@@ -25,6 +25,14 @@ spec:
               value: password
             - name: KC_HOSTNAME_STRICT
               value: "false"
+            - name: KC_DB
+              value: "postgres"
+            - name: KC_DB_URL
+              value: "jdbc:postgresql://polar-postgres-keycloak:5432/keycloakdb"
+            - name: KC_DB_USERNAME
+              value: "keycloak"
+            - name: KC_DB_PASSWORD
+              value: "password"
           ports:
             - containerPort: 8080
           volumeMounts:
